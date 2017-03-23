@@ -1,0 +1,15 @@
+# t-pen.org credentials
+username:
+password:
+
+# boolean
+debug: false
+
+# filename
+logfile: ./backup.log
+
+# timeout when accessing t-pen
+timeout: 10
+
+# give up after this many timeouts
+timeout_errors_max: 3
