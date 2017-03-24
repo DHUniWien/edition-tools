@@ -11,7 +11,7 @@ from tpen import TPen
 from command import run
 
 
-repo_prefix = 'ssh://git@github.com/oftl/'
+repo_prefix = 'ssh://git@github.com/DHUniWien/'
 repo_name   = 'MatthewEdessa'
 repo        = repo_prefix + repo_name
 

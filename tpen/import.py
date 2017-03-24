@@ -7,8 +7,8 @@ import logging
 
 from command import run
 
-indir       = '/home/oftl/univie/t-pen.org/tpen-backup/'
-repo_prefix = 'ssh://git@github.com/oftl/'
+indir       = '~/tpen-backup/'
+repo_prefix = 'ssh://git@github.com/DHUniWien/'
 repo_name   = 'MatthewEdessa'
 repo        = repo_prefix + repo_name
 p           = re.compile ('^(?P<year>\d{4})(?P<month>\d{2})(?P<day>\d{2})$')
