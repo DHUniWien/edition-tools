@@ -12,4 +12,4 @@ logfile: ./backup.log
 timeout: 10
 
 # give up after this many timeouts
-timeout_errors_max: 3
+max_errors: 3

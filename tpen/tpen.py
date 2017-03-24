@@ -3,6 +3,12 @@ import re
 import hashlib
 import logging
 from bs4 import BeautifulSoup
+import pprint
+
+import time
+import random
+
+pp = pprint.PrettyPrinter (indent = 4)
 
 
 class TPen (object):
@@ -13,11 +19,11 @@ class TPen (object):
         """ the following keys are possible in the mandatory cfg dict
 
             username
-            password ............. t-pen credentials
-            debug ................ additional debug logging
-            logfile .............. logfile location
-            timeout .............. timeout when accessing t-pen
-            timeout_errors_max ... give up after this many timeouts
+            password ..... t-pen credentials
+            debug ........ additional debug logging
+            logfile ...... logfile location
+            timeout ...... timeout when accessing t-pen
+            max_errors ... give up after this many errors (used for this and that)
 
             init will try to login into t-pen or fail miserably
         """
@@ -25,13 +31,23 @@ class TPen (object):
         cfg = kwa.get ('cfg')
 
         self.timeout = cfg.get ('timeout')
-        self.timeout_errors_max = cfg.get ('timeout_errors_max')
+        self.max_errors = cfg.get ('max_errors')
         self.timeout_errors = 0
         self.cookies = None
 
         self.uri_index = 'http://t-pen.org/TPEN/index.jsp'
         self.uri_login = 'http://t-pen.org/TPEN/login.jsp'
         self.uri_project = 'http://t-pen.org/TPEN/project/'
+
+        self._global_errors = dict (
+            unexpected_content_type = 0,
+            bad_file                = 0,
+            empty_response          = 0,
+            non_ok_response         = 0,
+            login_md5               = 0,
+            login_text              = 0,
+            # impossible_chars        = 0,
+        )
 
         logging.basicConfig (
             format = '%(asctime)s %(message)s',
@@ -44,45 +60,48 @@ class TPen (object):
         md5_login_failed = 'b9abb18f4c42fd8321f97d38790d224d'
         login_success = 'document.location = "index.jsp";'
 
-        res = self._request (
-            verb = 'post',
-            uri = self.uri_login,
-            data = dict (
-                uname    = cfg.get ('username'),
-                password = cfg.get ('password'),
-        ))
-
         d = hashlib.md5 ()
-        d.update (res.text.encode())
-
-        # res.cookies is always set regardles off login success or error
-
         logged_in = False
-        while not logged_in and self.timeout_errors <= self.timeout_errors_max:
-            self.timeout_errors += 1
+        errors = 0
+        while not logged_in and errors < self.max_errors:
+
+            res = self._request (
+                verb = 'post',
+                uri = self.uri_login,
+                data = dict (
+                    uname    = cfg.get ('username'),
+                    password = cfg.get ('password'),
+            ))
+            d.update (res.text.encode())
 
             # "well" known md5 of response returned by t-pen in case of error
             if (md5_login_failed == d.hexdigest()):
-                logging.error ('[001] authentication failed (try %s)' % self.timeout_errors)
+                self._global_errors['login_md5'] += 1
+                errors += 1
+                logging.error ('authentication failed (md5) (try %s)' % errors)
+                logging.info ('bad res.cookies: %s ' % pp.pformat (res.cookies))
 
             # "well" known response returned by t-pen in case of success
             elif login_success not in res.text:
-                logging.error ('[002] authentication failed (try %s)' % self.timeout_errors)
-                logging.debug ('[002] res.headers %s: ' % res.headers)
-                logging.debug ('[002] res.history %s: ' % res.history)
-                logging.debug ('[002] res.text %s: ' % res.text)
+                self._global_errors['login_text'] += 1
+                errors += 1
+                logging.error ('authentication failed (text) (try %s)' % errors)
+                logging.info ('bad res.cookies: %s ' % pp.pformat (res.cookies))
 
+            # assuming we're logged in
             else:
                 logged_in = True
+                logging.info ('good res.cookies: %s ' % pp.pformat (res.cookies))
 
-        if not logged_in:
-            raise UserWarning ('[002] authentication failed')
+        if logged_in:
+            logging.info ('got %s errors logging in' % errors)
         else:
-            logging.info ('today it took %s tries to login' % self.timeout_errors)
+            raise UserWarning ('authentication failed')
 
-        self.timeout_errors = 0
         self.cookies = res.cookies
 
+    def global_errors (self):
+        return self._global_errors
 
     def projects_list (self):
         """ get a list of all projects of logged in account
@@ -118,21 +137,61 @@ class TPen (object):
         """
 
         project = kwa.get ('project')
-        res  = self._request (self.uri_project + project.get ('project_id'))
+        file_ok = False
+        errors  = 0
 
-        if res.ok and res.text:
-            logging.debug ('got project "%s" ("%s")' % (
+        while errors < self.max_errors and not file_ok:
+            res = self._request (self.uri_project + str (project.get ('project_id')))
+
+            # T-PEN sets the Content-Type header to either
+            # "application/ld+json;charset=UTF-8" or "text/plain; charset=utf-8"
+            # in the first case the content is encoded properly, not in the second
+            #
+            if res.headers.get ('Content-Type') != 'application/ld+json;charset=UTF-8':
+                errors += 1
+                self._global_errors['unexpected_content_type'] += 1
+
+                logging.info (
+                    '[%s, "%s"] got unexpected content-type "%s", expected: "%s" (try %s)' % (
+                        project.get ('project_id'),
+                        project.get ('label'),
+                        res.headers.get ('Content-Type'),
+                        'application/ld+json;charset=UTF-8',
+                        errors,
+                ))
+                log_res (res)
+
+            else:
+                file_ok = True
+
+# there are legal "?" too
+#
+#        # transcriptions beginning with a "?" are unlikely to be encoded properly
+#        # XXX but just as long as we're dealing with ancient armenian XXX
+#        #
+#        if re.match ('.*"cnt:chars" : ".*\?.*', res.text):
+#            self._global_errors['impossible_chars'] += 1
+#            logging.info ('[%s, "%s"] got offending string containing "?"' %
+#                project.get ('project_id'),
+#                project.get ('label'),
+#            )
+#            file_ok = False
+
+        if file_ok:
+            logging.debug ('[%s, "%s"] file looks good',
+                project.get ('project_id'),
                 project.get ('label'),
-                project.get ('project_id'),
-            ))
-
+            )
             project.update (data = res.text)
-            return project
         else:
-            logging.warning ('could not download project "%s" from: "%s"' % (
-                project.get ('project_id'),
-                uri,
-            ))
+            self._global_errors['bad_file'] += 1
+            logging.error ('[%s] skipping file', project.get ('project_id'))
+            project.update (
+                data = None,
+                garbage = res.text,
+            )
+
+        return project
 
 
     def projects (self, **kwa):
@@ -140,7 +199,17 @@ class TPen (object):
         """
 
         for project in self.projects_list():
+            # time.sleep (random.randint(12, 48))
             yield self.project (project = project)
+
+    def projects_as_list (self, **kwa):
+        """ get all projects of logged in account
+        """
+
+        # time.sleep (random.randint(12, 48))
+        [ self.project (project = project)
+            for project in self.projects_list()
+        ]
 
 
     def _request (self, uri, **kwa):
@@ -161,22 +230,58 @@ class TPen (object):
                     timeout = self.timeout,
                 )
             elif verb == 'get':
+                # XXX it is no genius idea to keep this in a rather generic _request()
+                headers = dict (Accept = 'application/ld+json;charset=UTF-8')
+
                 res = requests.get (
                     uri,
+                    headers = headers,
                     cookies = self.cookies,
                     timeout = self.timeout,
                 )
             else:
-                raise UserWarning ('[004] invalid verb')
+                raise UserWarning ('invalid verb')
 
         except requests.exceptions.Timeout as e:
-            logging.exception ('[003] cought requests.exceptions.Timeout')
-            self.timeout_error += 1
-            if self.timeout_errors >= self.timeout_errors_max:
-                raise e
+            logging.exception ('cought requests.exceptions.Timeout')
+            raise e
+
+        # status-code seems always 200, body sometimes empty
+        #
+        if not res.ok:
+            logging.error ('%(verb)s to %(uri) returned status code %(code)s' % dict (
+                verb = verb.upper(),
+                uri  = uri,
+                code = res.status_code,
+            ))
+            self._global_errors['non_ok_response'] += 1
+            log_res (res)
+
+        if not res.text:
+            logging.error (
+                '%(verb)s %(uri) returned empty body (status code: %(code)s' % dict (
+                    verb = verb.upper(),
+                    uri  = uri,
+                    code = res.status_code,
+            ))
+            self._global_errors['empty_response'] += 1
+            log_res (res)
 
         return res
 
+
+def log_res (res):
+    """ basically log the whole response
+    """
+
+    logging.debug ('--- begin last response ---')
+    logging.debug ('res.headers: %s ' % pp.pformat (res.headers))
+    logging.debug ('res.encoding: %s ' % res.encoding)
+    logging.debug ('res.status_code: %s ' % res.status_code)
+    logging.debug ('res.cookies: %s ' % pp.pformat (res.cookies))
+    logging.debug ('len (res.text): %s ' % len (res.text))
+    logging.debug ('res.history: %s ' % res.history)
+    logging.debug ('--- end last response ---')
 
 if __name__ == '__main__':
     pass

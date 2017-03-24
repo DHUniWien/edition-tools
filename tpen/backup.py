@@ -5,6 +5,7 @@ import tempfile
 import os
 import re
 import logging
+import datetime
 
 from tpen import TPen
 from command import run
@@ -37,9 +38,24 @@ def backup (**kwa):
         os.chdir (repo_name + '/transcription/')
 
         for project in tpen.projects():
-            with open ('./%s.json' % (project.get ('label')), 'w') as fh:
-                fh.write (project.get ('data'))
+            if project.get ('data'):
+                with open ('./%s.json' % (project.get ('label')), 'w') as fh:
+                    fh.write (project.get ('data'))
 
+            # option write-garbage
+            else:
+                logging.info ('no data for project <%s>' % project.get ('project_id'))
+                with open ('./%s.json.garbage' % (project.get ('label')), 'w') as fh:
+                    fh.write (project.get ('garbage'))
+
+        # option backup data
+        run (['/bin/cp', '-r', tmpdir,
+            '/tmp/tpen-backup-%s' % datetime.datetime.now().strftime('%Y-%m-%d_%H:%M:%S')
+        ])
+
+        # add all  *.json files for later  inspection just in case,  but not the
+        # .garbage files, never  the *.garbage files; they are  for looking, not
+        # for touching
         run (['/usr/bin/git', 'add', '*json'])
 
         logging.info (
@@ -62,4 +78,14 @@ def backup (**kwa):
 
 
 if __name__ == '__main__':
-    backup (tpen = setup())
+    tpen = setup()
+    backup (tpen = tpen)
+    logging.info ('tpen.global_errors: %s' % tpen.global_errors())
+
+    rj = max (len (k) for k in tpen.global_errors().keys()) + 2
+
+    [ logging.info (
+        '%s: %s', (error, count.rjust (rj))
+      )
+      for (error, count) in tpen.global_errors().items()
+    ]
