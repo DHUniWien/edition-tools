@@ -85,7 +85,7 @@ if __name__ == '__main__':
     rj = max (len (k) for k in tpen.global_errors().keys()) + 2
 
     [ logging.info (
-        '%s: %s', (error, count.rjust (rj))
+        '%s: %s', (error, str (count).rjust (rj))
       )
       for (error, count) in tpen.global_errors().items()
     ]
