@@ -77,15 +77,28 @@ def backup (**kwa):
             run (['/usr/bin/git', 'push'])
 
 
-if __name__ == '__main__':
-    tpen = setup()
-    backup (tpen = tpen)
-    logging.info ('tpen.global_errors: %s' % tpen.global_errors())
+def log_global_errors (**kwa):
+    ge = kwa.get ('ge')
 
-    rj = max (len (k) for k in tpen.global_errors().keys()) + 2
+    logging.info ('--- begin tpen.global_errors ---')
+
+    # XXX there might be room for improvement here
+    #
+    k_width = max ([ len(k) + 2 for k in ge.keys() ])
+    v_width = max ([ len(str(v)) for v in ge.values() ])
 
     [ logging.info (
-        '%s: %s', (error, str (count).rjust (rj))
-      )
-      for (error, count) in tpen.global_errors().items()
+        '%s %s' % (
+            error.ljust (k_width),
+            str (count).rjust (v_width),
+      ))
+      for (error, count) in ge.items()
     ]
+
+    logging.info ('--- end tpen.global_errors ---')
+
+
+if __name__ == '__main__':
+    tpen = setup()
+    #backup (tpen = tpen)
+    log_global_errors (ge = tpen.global_errors())
