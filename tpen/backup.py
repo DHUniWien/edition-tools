@@ -100,5 +100,5 @@ def log_global_errors (**kwa):
 
 if __name__ == '__main__':
     tpen = setup()
-    #backup (tpen = tpen)
+    backup (tpen = tpen)
     log_global_errors (ge = tpen.global_errors())
