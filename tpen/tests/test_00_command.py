@@ -8,8 +8,3 @@ class TestCommand (unittest.TestCase):
             run (['ls', './command.py']).get ('returncode'),
             0,
         )
-
-        self.assertEqual (
-            run (['ls', './COMMAND.PY']).get ('returncode'),
-            2,
-        )
