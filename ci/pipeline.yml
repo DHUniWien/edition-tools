@@ -11,8 +11,7 @@ resources:
       source:
         uri: {{tools-sources}}
         branch: {{tools-branch}}
-        paths: [tpen]
-        ignore-paths: [ci]
+        paths: [src]
 
     - name: tools-final-image
       type: docker-image
@@ -85,7 +84,7 @@ jobs:
             run:
               path: ls
               path: sh
-              dir: tools-sources/tpen
+              dir: tools-sources/src/tpen
               args:
                 - -exc
                 - |
@@ -130,7 +129,7 @@ jobs:
                 - -exc
                 - |
                   mkdir artifacts/tools/
-                  cp -r tools-sources/tpen/ artifacts/tools/
+                  cp -r tools-sources/src/tpen/ artifacts/tools/
                   mkdir artifacts/tools/tpen2tei/
                   cp -r tpen2tei-sources/*py artifacts/tools/tpen2tei/
                   cp tools-sources/ci/Dockerfile-final artifacts/Dockerfile
@@ -138,4 +137,5 @@ jobs:
         - put: tools-final-image
           params:
             build: artifacts
+            # resource/version-file
             tag: version/version
