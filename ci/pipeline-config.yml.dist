@@ -1,0 +1,16 @@
+tpen2tei-sources:
+tpen2tei-branch: master
+
+tools-sources:
+tools-branch: master
+
+tools-ci-sources:
+tools-ci-branch: master
+
+insecure-registries:
+tools-ci-image:
+tools-final-image:
+
+version-uri:
+version-branch: master
+version-file: ci/version

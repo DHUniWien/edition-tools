@@ -1,0 +1,7 @@
+FROM alpine
+LABEL maintainer=oftl@acdh.univie.ac.at \
+      vendor=DHUniWien
+
+RUN apk update \
+ && apk upgrade \
+ && apk add python3 py-lxml py-yaml \

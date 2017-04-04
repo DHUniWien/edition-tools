@@ -1,0 +1,14 @@
+REGISTRY=registry:5000
+
+/etc/hosts:
+<ip of registry> registry
+
+### tools-ci
+
+docker build --file Dockerfile-ci --tag tools-ci:latest .
+docker tag tools-ci:latest ${REGISTRY}/tools-ci:latest
+docker push ${REGISTRY}/tools-ci:latest
+
+docker build --file Dockerfile-final-base --tag tools-final-base:latest .
+docker tag tools-final-base:latest ${REGISTRY}/tools-final-base:latest
+docker push ${REGISTRY}/tools-final-base:latest

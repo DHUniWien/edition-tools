@@ -1,0 +1,142 @@
+---
+resources:
+    - name: tpen2tei-sources
+      type: git
+      source:
+        uri: {{tpen2tei-sources}}
+        branch: {{tpen2tei-branch}}
+
+    - name: tools-sources
+      type: git
+      source:
+        uri: {{tools-sources}}
+        branch: {{tools-branch}}
+        paths: [tpen]
+        ignore-paths: [ci]
+
+    - name: tools-final-image
+      type: docker-image
+      source:
+        repository: {{tools-final-image}}
+        insecure_registries: [ {{insecure-registries}} ]
+
+    - name: version
+      type: semver
+      source:
+        driver: git
+        uri: {{version-uri}}
+        branch: {{version-branch}}
+        file: {{version-file}}
+        initial_version: "0.0.0"
+        private_key: {{github-private-key}}
+
+jobs:
+    - name: test-tpen2tei
+      plan:
+        - get: tpen2tei-sources
+          trigger: true
+
+        - task: task-test-tpen2tei
+
+          config:
+            platform: linux
+            image_resource:
+              type: docker-image
+              source:
+                repository: {{tools-ci-image}}
+                insecure_registries: [ {{insecure-registries}} ]
+
+            inputs:
+              - name: tpen2tei-sources
+
+            outputs:
+              - name: artifacts
+
+            run:
+              path: sh
+              dir: tpen2tei-sources/tests
+              args:
+                - -exc
+                - |
+                  ls
+#                  PYTHONPATH=.. python3 -m unittest discover --start-directory .
+
+
+    - name: test-tpen
+      plan:
+        - get: tools-sources
+          trigger: true
+
+        - task: task-test-tpen
+
+          config:
+            platform: linux
+            image_resource:
+              type: docker-image
+              source:
+                repository: {{tools-ci-image}}
+                insecure_registries: [ {{insecure-registries}} ]
+
+            inputs:
+              - name: tools-sources
+
+            outputs:
+              - name: artifacts
+
+            run:
+              path: ls
+              path: sh
+              dir: tools-sources/tpen
+              args:
+                - -exc
+                - |
+                  python3 -m unittest discover --start-directory tests/
+
+
+    - name: build-image
+      plan:
+        - put: version
+          params:
+            bump: patch
+
+        - get: tpen2tei-sources
+          trigger: true
+          passed: [test-tpen2tei]
+
+        - get: tools-sources
+          trigger: true
+          passed: [test-tpen]
+
+        - task: task-copy
+
+          config:
+            platform: linux
+            image_resource:
+              type: docker-image
+              source:
+                repository: {{tools-ci-image}}
+                insecure_registries: [ {{insecure-registries}} ]
+
+            inputs:
+              - name: tpen2tei-sources
+              - name: tools-sources
+
+            outputs:
+              - name: artifacts
+
+            run:
+              path: sh
+              dir: /
+              args:
+                - -exc
+                - |
+                  mkdir artifacts/tools/
+                  cp -r tools-sources/tpen/ artifacts/tools/
+                  mkdir artifacts/tools/tpen2tei/
+                  cp -r tpen2tei-sources/*py artifacts/tools/tpen2tei/
+                  cp tools-sources/ci/Dockerfile-final artifacts/Dockerfile
+
+        - put: tools-final-image
+          params:
+            build: artifacts
+            tag: version/version
