@@ -92,7 +92,7 @@ def log_global_errors (**kwa):
             error.ljust (k_width),
             str (count).rjust (v_width),
       ))
-      for (error, count) in ge.items()
+      for (error, count) in sorted (ge.items(), key = lambda kv: kv[0])
     ]
 
     logging.info ('--- end tpen.global_errors ---')
