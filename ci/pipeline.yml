@@ -82,7 +82,6 @@ jobs:
               - name: artifacts
 
             run:
-              path: ls
               path: sh
               dir: tools-sources/src/tpen
               args:
