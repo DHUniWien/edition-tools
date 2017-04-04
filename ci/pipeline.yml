@@ -58,8 +58,7 @@ jobs:
               args:
                 - -exc
                 - |
-                  ls
-#                  PYTHONPATH=.. python3 -m unittest discover --start-directory .
+                  PYTHONPATH=.. python3 -m unittest discover --start-directory .
 
 
     - name: test-tpen
