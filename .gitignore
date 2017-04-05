@@ -1,4 +1,4 @@
-tpen/src/backup.yml
-tpen/src/backup.log
+src/tpen/backup.yml
+src/tpen/backup.log
 ci/git-ssh
 ci/pipeline-config.yml
