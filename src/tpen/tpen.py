@@ -217,34 +217,71 @@ class TPen (object):
             defaults to GET
         """
 
+        res = None
+        ex = None
+        ok = False
+        errors = 0
+        sleep_for = 2
+
+        while not ok and errors < self.max_errors:
+            try:
+                res = self._do_request (
+                    uri  = uri or kwa.get ('uri'),
+                    verb = kwa.get ('verb') or 'get',
+                    data = kwa.get ('data'),
+		)
+
+            except requests.exceptions.Timeout as e:
+                logging.error ('cought requests.exceptions.Timeout (try %s)' % errors)
+                errors += 1
+                ex = e
+                logging.info ('sleeping %s seconds' % sleep_for)
+                time.sleep (sleep_for)
+
+            else:
+                ok = True
+                logging.debug ('requeset went ok')
+
+        if ex:
+            logging.exception (
+                'cought requests.exceptions.Timeout %s times, giving up' %
+                max_errors
+            )
+            raise e
+
+        elif not ok:
+            logging.error ('something went terribly wrong')
+            raise UserWarning ('something went terribly wrong')
+
+
+        return res
+
+
+    def _do_request (self, uri, **kwa):
         uri  = uri or kwa.get ('uri')
         verb = kwa.get ('verb') or 'get'
         data = kwa.get ('data')
+        res  = None
 
-        try:
-            if verb == 'post':
-                res = requests.post (
-                    uri,
-                    data = data,
-                    cookies = self.cookies,
-                    timeout = self.timeout,
-                )
-            elif verb == 'get':
-                # XXX it is no genius idea to keep this in a rather generic _request()
-                headers = dict (Accept = 'application/ld+json;charset=UTF-8')
+        if verb == 'post':
+            res = requests.post (
+                uri,
+                data = data,
+                cookies = self.cookies,
+                timeout = self.timeout,
+            )
+        elif verb == 'get':
+            # XXX it is no genius idea to keep this in a rather generic _request()
+            headers = dict (Accept = 'application/ld+json;charset=UTF-8')
 
-                res = requests.get (
-                    uri,
-                    headers = headers,
-                    cookies = self.cookies,
-                    timeout = self.timeout,
-                )
-            else:
-                raise UserWarning ('invalid verb')
-
-        except requests.exceptions.Timeout as e:
-            logging.exception ('cought requests.exceptions.Timeout')
-            raise e
+            res = requests.get (
+                uri,
+                headers = headers,
+                cookies = self.cookies,
+                timeout = self.timeout,
+            )
+        else:
+            raise UserWarning ('invalid verb')
 
         # status-code seems always 200, body sometimes empty
         #
