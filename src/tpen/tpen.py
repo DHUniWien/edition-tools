@@ -35,9 +35,9 @@ class TPen (object):
         self.timeout_errors = 0
         self.cookies = None
 
-        self.uri_index = 'http://t-pen.org/TPEN/index.jsp'
-        self.uri_login = 'http://t-pen.org/TPEN/login.jsp'
-        self.uri_project = 'http://t-pen.org/TPEN/project/'
+        self.uri_index = cfg.get ('uri_index')
+        self.uri_login = cfg.get ('uri_login')
+        self.uri_project = cfg.get ('uri_project')
 
         self._global_errors = dict (
             unexpected_content_type = 0,
@@ -207,7 +207,7 @@ class TPen (object):
         """
 
         # time.sleep (random.randint(12, 48))
-        [ self.project (project = project)
+        return [ self.project (project = project)
             for project in self.projects_list()
         ]
 
@@ -232,7 +232,7 @@ class TPen (object):
 		)
 
             except requests.exceptions.Timeout as e:
-                logging.error ('cought requests.exceptions.Timeout (try %s)' % errors)
+                logging.error ('cought requests.exceptions.Timeout (try %s) for URI: <%s>' % (errors, uri))
                 errors += 1
                 ex = e
                 logging.info ('sleeping %s seconds' % sleep_for)
