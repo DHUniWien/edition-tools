@@ -11,7 +11,7 @@ resources:
       source:
         uri: {{tools-sources}}
         branch: {{tools-branch}}
-        paths: [src]
+        paths: [src, ci/resources]
 
     - name: tools-final-image
       type: docker-image
