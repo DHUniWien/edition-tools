@@ -13,6 +13,13 @@ resources:
         branch: {{tools-branch}}
         paths: [src, ci/resources]
 
+    - name: tools-config-sources
+      type: git
+      source:
+        uri: {{tools-config-sources}}
+        branch: {{tools-config-branch}}
+        private_key: {{DHUniWienMU-priv-key}}
+
     - name: tools-final-image
       type: docker-image
       source:
@@ -27,7 +34,7 @@ resources:
         branch: {{version-branch}}
         file: {{version-file}}
         initial_version: "0.0.0"
-        private_key: {{github-private-key}}
+        private_key: {{DHUniWienMU-priv-key}}
 
 jobs:
     - name: test-tpen2tei
@@ -62,8 +69,11 @@ jobs:
 
     - name: test-tpen
       plan:
-        - get: tools-sources
-          trigger: true
+        - aggregate:
+
+          - get: tools-sources
+            trigger: true
+          - get: tools-config-sources
 
         - task: task-test-tpen
 
@@ -77,6 +87,7 @@ jobs:
 
             inputs:
               - name: tools-sources
+              - name: tools-config-sources
 
             outputs:
               - name: artifacts
@@ -87,6 +98,7 @@ jobs:
               args:
                 - -exc
                 - |
+                  cp ../../../tools-config-sources/tpen/backup.yml .
                   python3 -m unittest discover --start-directory tests/
 
 
@@ -96,13 +108,17 @@ jobs:
           params:
             bump: patch
 
-        - get: tpen2tei-sources
-          trigger: true
-          passed: [test-tpen2tei]
+        - aggregate:
 
-        - get: tools-sources
-          trigger: true
-          passed: [test-tpen]
+          - get: tpen2tei-sources
+            trigger: true
+            passed: [test-tpen2tei]
+
+          - get: tools-sources
+            trigger: true
+            passed: [test-tpen]
+
+          - get: tools-config-sources
 
         - task: task-copy
 
@@ -117,6 +133,7 @@ jobs:
             inputs:
               - name: tpen2tei-sources
               - name: tools-sources
+              - name: tools-config-sources
 
             outputs:
               - name: artifacts
@@ -132,6 +149,7 @@ jobs:
                   mkdir artifacts/tools/tpen2tei/
                   cp -r tpen2tei-sources/*py artifacts/tools/tpen2tei/
                   cp tools-sources/ci/Dockerfile-final artifacts/Dockerfile
+                  cp tools-config-sources/tpen/backup.yml artifacts/tools/src/tpen/
 
         - put: tools-final-image
           params:

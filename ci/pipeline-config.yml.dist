@@ -4,6 +4,9 @@ tpen2tei-branch: master
 tools-sources:
 tools-branch: master
 
+tools-config-sources:
+tools-config-branch:
+
 insecure-registries:
 tools-ci-image:
 tools-final-image:
