@@ -148,8 +148,8 @@ jobs:
                   cp -r tools-sources/src/tpen/ artifacts/tools/
                   mkdir artifacts/tools/tpen2tei/
                   cp -r tpen2tei-sources/*py artifacts/tools/tpen2tei/
-                  cp tools-sources/ci/Dockerfile-final artifacts/Dockerfile
-                  cp tools-config-sources/tpen/backup.yml artifacts/tools/src/tpen/
+                  cp tools-sources/ci/resources/Dockerfile-final artifacts/Dockerfile
+                  cp tools-config-sources/tpen/backup.yml artifacts/tools/tpen/
 
         - put: tools-final-image
           params:
