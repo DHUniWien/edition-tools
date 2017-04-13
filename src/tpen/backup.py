@@ -80,22 +80,18 @@ def backup (**kwa):
 def log_global_errors (**kwa):
     ge = kwa.get ('ge')
 
-    logging.info ('--- begin tpen.global_errors ---')
-
     # XXX there might be room for improvement here
     #
     k_width = max ([ len(k) + 2 for k in ge.keys() ])
     v_width = max ([ len(str(v)) for v in ge.values() ])
 
     [ logging.info (
-        '%s %s' % (
+        '[error report] %s %s' % (
             error.ljust (k_width),
             str (count).rjust (v_width),
       ))
       for (error, count) in sorted (ge.items(), key = lambda kv: kv[0])
     ]
-
-    logging.info ('--- end tpen.global_errors ---')
 
 
 if __name__ == '__main__':
