@@ -7,8 +7,8 @@ import re
 from tpen import TPen
 
 CONFIG_FILE = './backup.yml'
-INDEX_FILE = './tests/data/index.htm'
-PROJECT_FILE = './tests/data/project-35.ld+json'
+INDEX_FILE = './tests/files/index.htm'
+PROJECT_FILE = './tests/files/project-35.ld+json'
 
 class TestHTTP (unittest.TestCase):
 
