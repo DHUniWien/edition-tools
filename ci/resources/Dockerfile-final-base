@@ -3,4 +3,8 @@ LABEL vendor=DHUniWien
 
 RUN apk update \
  && apk upgrade \
- && apk add python3 py-lxml py-yaml \
+ && apk add \
+    python3 \
+    py-lxml \
+    py-yaml \
+    py-requests
