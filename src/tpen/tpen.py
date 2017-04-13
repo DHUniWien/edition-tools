@@ -311,14 +311,12 @@ def log_res (res):
     """ basically log the whole response
     """
 
-    logging.debug ('--- begin last response ---')
-    logging.debug ('res.headers: %s ' % pp.pformat (res.headers))
-    logging.debug ('res.encoding: %s ' % res.encoding)
-    logging.debug ('res.status_code: %s ' % res.status_code)
-    logging.debug ('res.cookies: %s ' % pp.pformat (res.cookies))
-    logging.debug ('len (res.text): %s ' % len (res.text))
-    logging.debug ('res.history: %s ' % res.history)
-    logging.debug ('--- end last response ---')
+    logging.debug ('[last response] res.headers: %s ' % pp.pformat (res.headers))
+    logging.debug ('[last response] res.encoding: %s ' % res.encoding)
+    logging.debug ('[last response] res.status_code: %s ' % res.status_code)
+    logging.debug ('[last response] res.cookies: %s ' % pp.pformat (res.cookies))
+    logging.debug ('[last response] len (res.text): %s ' % len (res.text))
+    logging.debug ('[last response] res.history: %s ' % res.history)
 
 if __name__ == '__main__':
     pass
