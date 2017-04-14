@@ -164,19 +164,6 @@ class TPen (object):
             else:
                 file_ok = True
 
-# there are legal "?" too
-#
-#        # transcriptions beginning with a "?" are unlikely to be encoded properly
-#        # XXX but just as long as we're dealing with ancient armenian XXX
-#        #
-#        if re.match ('.*"cnt:chars" : ".*\?.*', res.text):
-#            self._global_errors['impossible_chars'] += 1
-#            logging.info ('[%s, "%s"] got offending string containing "?"' %
-#                project.get ('project_id'),
-#                project.get ('label'),
-#            )
-#            file_ok = False
-
         if file_ok:
             logging.debug ('[%s, "%s"] file looks good',
                 project.get ('project_id'),
@@ -185,7 +172,10 @@ class TPen (object):
             project.update (data = res.text)
         else:
             self._global_errors['bad_file'] += 1
-            logging.error ('[%s] skipping file', project.get ('project_id'))
+            logging.error ('[%s, %s] skipping file',
+                project.get ('project_id'),
+                project.get ('label'),
+            )
             project.update (
                 data = None,
                 garbage = res.text,
