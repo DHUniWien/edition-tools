@@ -156,3 +156,4 @@ jobs:
             build: artifacts
             # resource/version-file
             tag: version/version
+            tag_as_latest: True
