@@ -235,9 +235,9 @@ class TPen (object):
         if ex:
             logging.exception (
                 'cought requests.exceptions.Timeout %s times, giving up' %
-                max_errors
+                self.max_errors
             )
-            raise e
+            raise ex
 
         elif not ok:
             logging.error ('something went terribly wrong')
