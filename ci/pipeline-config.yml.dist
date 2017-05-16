@@ -5,7 +5,7 @@ tools-sources:
 tools-branch: master
 
 tools-config-sources:
-tools-config-branch:
+tools-config-branch: master
 
 insecure-registries:
 tools-ci-image:
@@ -14,3 +14,7 @@ tools-final-image:
 version-uri:
 version-branch: master
 version-file: ci/version
+
+collatex-sources:
+collatex-ci-image:
+maven-config-uri:

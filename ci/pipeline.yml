@@ -26,6 +26,18 @@ resources:
         repository: {{tools-final-image}}
         insecure_registries: [ {{insecure-registries}} ]
 
+    - name: collatex-sources
+      type: git
+      source:
+        uri: {{collatex-sources}}
+        paths: [collatex-core, collatex-tools, ci/resources]
+
+    - name: maven-config
+      type: git
+      source:
+        uri: {{maven-config-uri}}
+        private_key: {{DHUniWienMU-priv-key}}
+
     - name: version
       type: semver
       source:
@@ -102,6 +114,49 @@ jobs:
                   python3 -m unittest discover --start-directory tests/
 
 
+    - name: test-collatex
+      plan:
+        - aggregate:
+          - get: collatex-sources
+            trigger: true
+          - get: maven-config
+
+        - task: task-test-collatex
+
+          config:
+            platform: linux
+            image_resource:
+              type: docker-image
+              source:
+                repository: {{collatex-ci-image}}
+                insecure_registries: [ {{insecure-registries}} ]
+
+            inputs:
+              - name: collatex-sources
+              - name: maven-config
+
+            run:
+              path: sh
+              args:
+                - -exc
+                - |
+                  mkdir /root/.m2/
+                  cp maven-config/settings.xml /root/.m2/
+                  cd collatex-sources
+                  mvn test
+
+
+    - name: version
+      type: semver
+      source:
+        driver: git
+        uri: {{version-uri}}
+        branch: {{version-branch}}
+        file: {{version-file}}
+        initial_version: "0.0.0"
+        private_key: {{DHUniWienMU-priv-key}}
+
+
     - name: build-image
       plan:
         - put: version
@@ -120,6 +175,39 @@ jobs:
 
           - get: tools-config-sources
 
+          - get: collatex-sources
+            passed: [test-collatex]
+            trigger: true
+
+          - get: maven-config
+
+        - task: task-package-collatex
+
+          config:
+            platform: linux
+            image_resource:
+              type: docker-image
+              source:
+                repository: {{collatex-ci-image}}
+                insecure_registries: [ {{insecure-registries}} ]
+
+            inputs:
+              - name: collatex-sources
+              - name: maven-config
+            outputs:
+              - name: collatex
+
+            run:
+              path: sh
+              args:
+                - -exc
+                - |
+                  mkdir /root/.m2/
+                  cp maven-config/settings.xml /root/.m2/
+                  cd collatex-sources
+                  mvn package
+                  cp collatex-tools/target/collatex-tools-1.8-SNAPSHOT.jar ../collatex/collatex.jar
+
         - task: task-copy
 
           config:
@@ -134,6 +222,7 @@ jobs:
               - name: tpen2tei-sources
               - name: tools-sources
               - name: tools-config-sources
+              - name: collatex
 
             outputs:
               - name: artifacts
@@ -150,6 +239,7 @@ jobs:
                   cp -r tpen2tei-sources/*py artifacts/tools/tpen2tei/
                   cp tools-sources/ci/resources/Dockerfile-final artifacts/Dockerfile
                   cp tools-config-sources/tpen/backup.yml artifacts/tools/tpen/
+                  cp collatex/collatex.jar artifacts/tools/collatex.jar
 
         - put: tools-final-image
           params:
