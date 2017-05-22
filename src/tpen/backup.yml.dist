@@ -7,9 +7,10 @@ debug: false
 
 # filename
 logfile: ./backup.log
+loglevel: DEBUG
 
 # timeout when accessing t-pen
-timeout: 10
+timeout: 120
 
 # give up after this many timeouts
 max_errors: 3
