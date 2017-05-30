@@ -8,4 +8,7 @@ RUN apk update \
     py-lxml \
     py-yaml \
     py-requests \
-    openjdk8-jre
+    openjdk8-jre \
+    git
+
+RUN pip3 install bs4

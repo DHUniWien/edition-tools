@@ -72,11 +72,11 @@ jobs:
 
             run:
               path: sh
-              dir: tpen2tei-sources/tests
+              dir: tpen2tei-sources
               args:
                 - -exc
                 - |
-                  PYTHONPATH=.. python3 -m unittest discover --start-directory .
+                  python3 -m unittest discover --start-directory tests/
 
 
     - name: test-tpen
@@ -144,17 +144,6 @@ jobs:
                   cp maven-config/settings.xml /root/.m2/
                   cd collatex-sources
                   mvn test
-
-
-    - name: version
-      type: semver
-      source:
-        driver: git
-        uri: {{version-uri}}
-        branch: {{version-branch}}
-        file: {{version-file}}
-        initial_version: "0.0.0"
-        private_key: {{DHUniWienMU-priv-key}}
 
 
     - name: build-image
@@ -236,7 +225,7 @@ jobs:
                   mkdir artifacts/tools/
                   cp -r tools-sources/src/tpen/ artifacts/tools/
                   mkdir artifacts/tools/tpen2tei/
-                  cp -r tpen2tei-sources/*py artifacts/tools/tpen2tei/
+                  cp -r tpen2tei-sources artifacts/tools/
                   cp tools-sources/ci/resources/Dockerfile-final artifacts/Dockerfile
                   cp tools-config-sources/tpen/backup.yml artifacts/tools/tpen/
                   cp collatex/collatex.jar artifacts/tools/collatex.jar
