@@ -10,6 +10,7 @@ RUN apk update \
     py-requests \
     openjdk8-jre \
     git \
-    openssh
+    openssh \
+    libxml2-utils
 
 RUN pip3 install bs4
