@@ -1,0 +1,167 @@
+---
+resources:
+    # already fetched into git by cronjob at storage
+    #
+    - name: tpen-data
+      type: git
+      source:
+        uri: {{tpen-data-uri}}
+        branch: {{tpen-data-branch}}
+        paths: [transcription]
+        private_key: {{DHUniWienMU-priv-key}}
+
+    #- name: version
+    #  type: semver
+    #  source:
+    #    driver: git
+    #    uri: {{version-uri}}
+    #    branch: {{version-branch}}
+    #    file: {{version-file}}
+    #    initial_version: "0.0.0"
+    #    private_key: {{DHUniWienMU-priv-key}}
+
+    - name: ssh-keys
+      type: git
+      source:
+        uri: {{ssh-keys-uri}}
+        private_key: {{DHUniWienMU-priv-key}}
+
+
+jobs:
+
+    - name: tpen2tei
+      plan:
+        - aggregate:
+          - get: tpen-data
+            trigger: true
+          - get: ssh-keys
+
+        - task: task-tpen2tei
+
+          config:
+            platform: linux
+            image_resource:
+              type: docker-image
+              source:
+                repository: {{tools-image}}
+                insecure_registries: [ {{insecure-registries}} ]
+
+            inputs:
+              - name: tpen-data
+              - name: ssh-keys
+            outputs:
+              - name: tei-xml
+              - name: tpen-data-bumped
+
+            run:
+              path: sh
+              args:
+                - -exc
+                - |
+                  chmod 600 ssh-keys/github/DHUniWienMU-id_rsa
+                  export GIT_SSH_COMMAND="ssh -o StrictHostKeyChecking=no -i ssh-keys/github/DHUniWienMU-id_rsa"
+
+                  git clone {{tpen-data-uri}} tpen-data-bumped
+
+                  cd tpen-data-bumped
+                  [ -d transcription/tei-xml ] || mkdir transcription/tei-xml/
+
+                  python3 -m tpen2tei.json2xml -w transcription/ transcription/tei-xml/
+
+                  git config --global user.email "DHUniWienMU@foo.bar"
+                  git config --global user.name "DHUniWienMU"
+
+                  cd transcription/tei-xml/
+                  git add *xml
+
+                  GIT_STATUS=`git status`
+
+                  if echo $GIT_STATUS | grep -q "Changes to be committed:" -;
+                  then
+                      git commit -m "tpen2tei" *xml
+                  fi
+                  
+        - put: tpen-data
+          params: {repository: tpen-data-bumped}
+
+    - name: validate-tei-xml
+      plan:
+        - get: tpen-data
+          trigger: true
+          passed: [tpen2tei]
+
+        - task: task-validate-tei-xml
+
+          config:
+            platform: linux
+            image_resource:
+              type: docker-image
+              source:
+                repository: {{tools-image}}
+                insecure_registries: [ {{insecure-registries}} ]
+
+            inputs:
+              - name: tpen-data
+
+            run:
+              path: sh
+              args:
+                - -ec
+                - |
+                  SAVEIFS=$IFS
+                  IFS=$(echo -en "\n\b")
+
+                  for FILE in tpen-data/transcription/tei-xml/*xml
+                  do
+                      xmlwf $FILE
+                      xmllint --noout --relaxng {{relaxng_schema}} $FILE
+                  done
+
+                  IFS=$SAVEIFS
+
+        #- task: collate
+
+        #  config:
+        #    platform: linux
+        #    image_resource:
+        #      type: docker-image
+        #      source:
+        #        repository: {{tools-image}}
+        #        insecure_registries: [ {{insecure-registries}} ]
+
+        #    inputs:
+        #      - name: tei-xml
+        #    outputs:
+        #      - name: collated
+
+        #    run:
+        #      path: sh
+        #      args:
+        #        - -exc
+        #        - |
+        #          ls
+        #          ls /root
+        #          pwd
+        #          java -jar /root/collatex.jar -h
+
+        #- task: upload
+
+        #  config:
+        #    platform: linux
+        #    image_resource:
+        #      type: docker-image
+        #      source:
+        #        repository: {{tools-image}}
+        #        insecure_registries: [ {{insecure-registries}} ]
+
+        #    inputs:
+        #      - name: collated
+
+        #    run:
+        #      path: echo
+        #      dir: data
+        #      args: ["feed stemmarest"]
+
+        #- put: version
+        #  params:
+        #    bump: patch

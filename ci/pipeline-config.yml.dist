@@ -1,0 +1,16 @@
+tpen-data-uri:
+tpen-data-branch:
+
+tpen2tei-uri:
+tpen2tei-branch:
+
+insecure-registries: "<ip of registry>:5000"
+tools-image: <ip of registry>:5000/tools-final
+
+version-uri:
+version-branch:
+version-file: ci/version
+
+ssh-keys-uri:
+
+relaxng_schema: http://www.tei-c.org/release/xml/tei/custom/schema/relaxng/tei_all.rng
