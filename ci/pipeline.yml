@@ -80,7 +80,7 @@ jobs:
                   then
                       git commit -m "tpen2tei" *xml
                   fi
-                  
+
         - put: tpen-data
           params: {repository: tpen-data-bumped}
 
