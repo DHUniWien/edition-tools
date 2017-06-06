@@ -117,13 +117,13 @@ jobs:
                   sh -c '
                       for FILE in tpen-data/transcription/tei-xml/*xml
                       do
-                          # xmlwf $FILE
+                          # xmlwf "$FILE" && \
                           xmllint --noout --relaxng "{{relaxng_schema}}" "$FILE"
                       done
                   '
 
                   IFS=$SAVEIFS
-                  return 0
+                  exit 0
 
         #- task: collate
 
