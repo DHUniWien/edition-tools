@@ -43,7 +43,7 @@ if __name__ == '__main__':
     #      filename = '%s.log' % os.path.basename (sys.argv[0]),
     #  )
 
-    json2xml.json2xml (
+    tpen2tei.json2xml.json2xml (
         indir               = args.indir,
         outdir              = args.outdir,
         write_stdout_stderr = args.write_stdout_stderr,
