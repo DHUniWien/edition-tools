@@ -42,6 +42,7 @@ jobs:
           - get: tpen-data
             trigger: true
           - get: ssh-keys
+          - get: moe-data
 
         - task: task-tpen2tei
 
