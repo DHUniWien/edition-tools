@@ -9,36 +9,40 @@ import argparse
 import tpen2tei.json2xml
 
 
-metadata = {
-    'title': 'Ժամանակագրութիւն',
-    'author': 'Մատթէոս Ուռհայեցի'
-}
+def metadata():
+    """Return a dictionary suitable for the 'metadata' parameter to from_sc."""
+    return {
+        'title': 'Ժամանակագրութիւն',
+        'author': 'Մատթէոս Ուռհայեցի'
+    }
 
-special_chars = {
-    'աշխարհ': ('asxarh', 'ARMENIAN ASHXARH SYMBOL'),
-    'ամենայն': ('amenayn', 'ARMENIAN AMENAYN SYMBOL'),
-    'արեգակն': ('aregakn', 'ARMENIAN AREGAKN SYMBOL'),
-    'լուսին': ('lusin', 'ARMENIAN LUSIN SYMBOL'),
-    'որպէս': ('orpes', 'ARMENIAN ORPES SYMBOL'),
-    'երկիր': ('erkir', 'ARMENIAN ERKIR SYMBOL'),
-    'երկին': ('erkin', 'ARMENIAN ERKIN SYMBOL'),
-    'ընդ': ('und', 'ARMENIAN END SYMBOL'),
-    'ըստ': ('ust', 'ARMENIAN EST SYMBOL'),
-    'պտ': ('ptlig', 'ARMENIAN PEH-TIWN LIGATURE'),
-    'թբ': ('tblig', 'ARMENIAN TO-BEN LIGATURE'),
-    'թե': ('techlig', 'ARMENIAN TO-ECH LIGATURE'),
-    'թի': ('tinilig', 'ARMENIAN TO-INI LIGATURE'),
-    'թէ': ('tehlig', 'ARMENIAN TO-EH LIGATURE'),
-    'էս': ('eslig', 'ARMENIAN EH-SEH LIGATURE'),
-    'ես': ('echslig', 'ARMENIAN ECH-SEH LIGATURE'),
-    'յր': ('yrlig', 'ARMENIAN YI-REH LIGATURE'),
-    'րզ': ('rzlig', 'ARMENIAN REH-ZA LIGATURE'),
-    'զմ': ('zmlig', 'ARMENIAN ZA-MEN LIGATURE'),
-    'թգ': ('tglig', 'ARMENIAN TO-GIM LIGATURE'),
-    'ա': ('avar', 'ARMENIAN AYB VARIANT'),
-    'հ': ('hvar', 'ARMENIAN HO VARIANT'),
-    'յ': ('yabove', 'ARMENIAN YI SUPERSCRIPT VARIANT')    
-}
+def special_chars():
+    """Return a dictionary suitable for the 'special_chars parameter to from_sc."""
+    return {
+        'աշխարհ': ('asxarh', 'ARMENIAN ASHXARH SYMBOL'),
+        'ամենայն': ('amenayn', 'ARMENIAN AMENAYN SYMBOL'),
+        'արեգակն': ('aregakn', 'ARMENIAN AREGAKN SYMBOL'),
+        'լուսին': ('lusin', 'ARMENIAN LUSIN SYMBOL'),
+        'որպէս': ('orpes', 'ARMENIAN ORPES SYMBOL'),
+        'երկիր': ('erkir', 'ARMENIAN ERKIR SYMBOL'),
+        'երկին': ('erkin', 'ARMENIAN ERKIN SYMBOL'),
+        'ընդ': ('und', 'ARMENIAN END SYMBOL'),
+        'ըստ': ('ust', 'ARMENIAN EST SYMBOL'),
+        'պտ': ('ptlig', 'ARMENIAN PEH-TIWN LIGATURE'),
+        'թբ': ('tblig', 'ARMENIAN TO-BEN LIGATURE'),
+        'թե': ('techlig', 'ARMENIAN TO-ECH LIGATURE'),
+        'թի': ('tinilig', 'ARMENIAN TO-INI LIGATURE'),
+        'թէ': ('tehlig', 'ARMENIAN TO-EH LIGATURE'),
+        'էս': ('eslig', 'ARMENIAN EH-SEH LIGATURE'),
+        'ես': ('echslig', 'ARMENIAN ECH-SEH LIGATURE'),
+        'յր': ('yrlig', 'ARMENIAN YI-REH LIGATURE'),
+        'րզ': ('rzlig', 'ARMENIAN REH-ZA LIGATURE'),
+        'զմ': ('zmlig', 'ARMENIAN ZA-MEN LIGATURE'),
+        'թգ': ('tglig', 'ARMENIAN TO-GIM LIGATURE'),
+        'ա': ('avar', 'ARMENIAN AYB VARIANT'),
+        'հ': ('hvar', 'ARMENIAN HO VARIANT'),
+        'յ': ('yabove', 'ARMENIAN YI SUPERSCRIPT VARIANT')    
+    }
 
 def numeric_parser(val):
     """Given the text content of a <num> element, try to turn it into a number."""
@@ -94,7 +98,7 @@ if __name__ == '__main__':
         indir               = args.indir,
         outdir              = args.outdir,
         write_stdout_stderr = args.write_stdout_stderr,
-        metadata            = metadata,
-        special_chars       = special_chars,
-        numeric_parser      = numeric_parser,
+        metadata            = metadata(),       # wants a dict
+        special_chars       = special_chars(),  # wants a dict
+        numeric_parser      = numeric_parser,   # wants a function
     )
