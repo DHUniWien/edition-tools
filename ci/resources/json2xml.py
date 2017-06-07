@@ -20,7 +20,7 @@ def numeric_parser():
 
 if __name__ == '__main__':
 
-    parser = argparse.argumentparser()
+    parser = argparse.ArgumentParser()
     parser.add_argument (
          "indir",
          help = "input directory t-pen output files",
@@ -44,9 +44,9 @@ if __name__ == '__main__':
     #  )
 
     json2xml.json2xml (
-        indir               = args.get ('indir'),
-        outdir              = args.get ('outdir'),
-        write_stdout_stderr = args.get ('write_stdout_stderr'),
+        indir               = args.indir,
+        outdir              = args.outdir,
+        write_stdout_stderr = args.write_stdout_stderr,
         metadata            = metadata(),
         special_chars       = special_chars(),
         numeric_parser      = numeric_parser(),
