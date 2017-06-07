@@ -10,6 +10,13 @@ resources:
         paths: [transcription]
         private_key: {{DHUniWienMU-priv-key}}
 
+    - name: moe-data
+      type: git
+      source:
+        uri: {{moe-data-uri}}
+        branch: {{moe-data-branch}}
+        paths: [ci/resources]
+
     #- name: version
     #  type: semver
     #  source:
@@ -48,6 +55,7 @@ jobs:
 
             inputs:
               - name: tpen-data
+              - name: moe-data
               - name: ssh-keys
             outputs:
               - name: tei-xml
@@ -66,7 +74,7 @@ jobs:
                   cd tpen-data-bumped
                   [ -d transcription/tei-xml ] || mkdir transcription/tei-xml/
 
-                  python3 -m tpen2tei.json2xml -w transcription/ transcription/tei-xml/
+                  python3 moe-data/ci/resources/json2xml.py -w transcription/ transcription/tei-xml/
 
                   git config --global user.email "DHUniWienMU@foo.bar"
                   git config --global user.name "DHUniWienMU"

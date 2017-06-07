@@ -4,6 +4,9 @@ tpen-data-branch:
 tpen2tei-uri:
 tpen2tei-branch:
 
+moe-data-uri:
+moe-data-branch:
+
 insecure-registries: "<ip of registry>:5000"
 tools-image: <ip of registry>:5000/tools-final
 
