@@ -44,30 +44,34 @@ def special_chars():
         'յ': ('yabove', 'ARMENIAN YI SUPERSCRIPT VARIANT')
     }
 
-def numeric_parser(val):
+def numeric_parser():
     """Given the text content of a <num> element, try to turn it into a number."""
-    # Create the stack of characters
-    sigfigs = [ord(c) for c in val.replace('և', '').upper() if ord(c) > 1328 and ord(c) < 1365]
-    total = 0
-    last = None
-    for ch in sigfigs:
-        # What is this one's numeric value?
-        if ch < 1338:    # Ա-Թ
-            chval = ch - 1328
-        elif ch < 1347:  # Ժ-Ղ
-            chval = (ch - 1337) * 10
-        elif ch < 1356:  # Ճ-Ջ
-            chval = (ch - 1346) * 100
-        else:            # Ռ-Ք
-            chval = (ch - 1355) * 1000
 
-        # Put it in the total
-        if last is None or chval < last:
-            total += chval
-        else:
-            total *= chval
-        last = chval
-    return total
+    def func (val):
+        # Create the stack of characters
+        sigfigs = [ord(c) for c in val.replace('և', '').upper() if ord(c) > 1328 and ord(c) < 1365]
+        total = 0
+        last = None
+        for ch in sigfigs:
+            # What is this one's numeric value?
+            if ch < 1338:    # Ա-Թ
+                chval = ch - 1328
+            elif ch < 1347:  # Ժ-Ղ
+                chval = (ch - 1337) * 10
+            elif ch < 1356:  # Ճ-Ջ
+                chval = (ch - 1346) * 100
+            else:            # Ռ-Ք
+                chval = (ch - 1355) * 1000
+
+            # Put it in the total
+            if last is None or chval < last:
+                total += chval
+            else:
+                total *= chval
+            last = chval
+        return total
+
+    return func
 
 if __name__ == '__main__':
 
@@ -100,5 +104,5 @@ if __name__ == '__main__':
         write_stdout_stderr = args.write_stdout_stderr,
         metadata            = metadata(),       # wants a dict
         special_chars       = special_chars(),  # wants a dict
-        numeric_parser      = numeric_parser,   # wants a function
+        numeric_parser      = numeric_parser(), # wants a function
     )
