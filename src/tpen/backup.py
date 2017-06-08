@@ -44,7 +44,7 @@ def backup (**kwa):
 
             # option write-garbage
             else:
-                logging.info ('no data for project <%s>' % project.get ('project_id'))
+                logging.info ('no data for project <%s>' % project.get ('tpen_id'))
                 with open ('./%s.json.garbage' % (project.get ('label')), 'w') as fh:
                     fh.write (project.get ('garbage'))
 
