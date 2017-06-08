@@ -41,7 +41,7 @@ def special_chars():
         'թգ': ('tglig', 'ARMENIAN TO-GIM LIGATURE'),
         'ա': ('avar', 'ARMENIAN AYB VARIANT'),
         'հ': ('hvar', 'ARMENIAN HO VARIANT'),
-        'յ': ('yabove', 'ARMENIAN YI SUPERSCRIPT VARIANT')    
+        'յ': ('yabove', 'ARMENIAN YI SUPERSCRIPT VARIANT')
     }
 
 def numeric_parser(val):
@@ -68,7 +68,7 @@ def numeric_parser(val):
             total *= chval
         last = chval
     return total
-    
+
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
