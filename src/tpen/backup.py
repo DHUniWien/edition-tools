@@ -15,30 +15,59 @@ repo_prefix = 'ssh://git@github.com/DHUniWien/'
 repo_name   = 'MatthewEdessa'
 repo        = repo_prefix + repo_name
 
-
-def setup():
+def get_config():
     with open ('./backup.yml', 'r') as ymlfile:
-        cfg = yaml.load (ymlfile)
-        tpen = TPen (cfg = cfg)
+        return yaml.load (ymlfile)
 
-        logging.basicConfig (
-            format = '%(asctime)s %(message)s',
-            filename = cfg.get ('logfile'),
-            level = cfg.get ('debug') and logging.DEBUG or logging.ERROR,
-        )
 
-        return tpen
+def setup (config):
+    tpen = TPen (cfg = config)
+
+    logging.basicConfig (
+        format = '%(asctime)s %(message)s',
+        filename = config.get ('logfile'),
+        level = config.get ('loglevel'),
+    )
+
+    return tpen
 
 def backup (**kwa):
     tpen = kwa.get ('tpen')
+    config = kwa.get ('config')
 
     with tempfile.TemporaryDirectory() as tmpdir:
         os.chdir (tmpdir)
         run (['/usr/bin/git', 'clone',  repo])
         os.chdir (repo_name + '/transcription/')
 
+        # delete obsolete files
+        #
+        for f in os.listdir():
+            if f in config.get ('keeplist'):
+                logging.error ('keeping file <%s> although it seems obsolete' % f)
+
+            # delete what is not on T-PEN anymore
+            elif f not in ['%s.json' % p.get ('label') for p in tpen.projects_list()]:
+                logging.error ('file <%s> is obsolete and will be deleted' % f)
+                run (['/usr/bin/git', 'rm', f])
+
+            # delete what is blacklisted
+            elif f in ['%s.json' % b for b in config.get ('blacklist')]:
+                logging.error ('file <%s> blacklisted and will be deleted' % f)
+                run (['/usr/bin/git', 'rm', f])
+
+
         for project in tpen.projects():
-            if project.get ('data'):
+
+            # implement a simple blacklist
+            #
+            if project.get ('label') in config.get ('blacklist'):
+                logging.info (
+                    'project <%s> is blacklisted' %
+                    project.get ('tpen_id')
+                )
+
+            elif project.get ('data'):
                 with open ('./%s.json' % (project.get ('label')), 'w') as fh:
                     fh.write (project.get ('data'))
 
@@ -47,11 +76,6 @@ def backup (**kwa):
                 logging.info ('no data for project <%s>' % project.get ('tpen_id'))
                 with open ('./%s.json.garbage' % (project.get ('label')), 'w') as fh:
                     fh.write (project.get ('garbage'))
-
-        # option backup data
-        run (['/bin/cp', '-r', tmpdir,
-            '/tmp/tpen-backup-%s' % datetime.datetime.now().strftime('%Y-%m-%d_%H:%M:%S')
-        ])
 
         # add all  *.json files for later  inspection just in case,  but not the
         # .garbage files, never  the *.garbage files; they are  for looking, not
@@ -62,6 +86,11 @@ def backup (**kwa):
             '`git status` says: %s' %
             run (['/usr/bin/git', 'status']).get ('stdout')
         )
+
+        # option backup data
+        run (['/bin/cp', '-r', tmpdir,
+            '/tmp/tpen-backup-%s' % datetime.datetime.now().strftime('%Y-%m-%d_%H:%M:%S')
+        ])
 
         ret = run (['/usr/bin/git', 'commit', '-m', 'T-PEN backup automagick'])
 
@@ -95,6 +124,7 @@ def log_global_errors (**kwa):
 
 
 if __name__ == '__main__':
-    tpen = setup()
-    backup (tpen = tpen)
+    config = get_config()
+    tpen = setup (config)
+    backup (tpen = tpen, config = config)
     log_global_errors (ge = tpen.global_errors())

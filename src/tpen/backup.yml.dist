@@ -20,5 +20,6 @@ uri_index: http://t-pen.org/TPEN/index.jsp
 uri_login:  http://t-pen.org/TPEN/login.jsp
 uri_project: http://t-pen.org/TPEN/project/
 
-whitelist: []
+# labels of T-PEN projects to exclude from the backup
+# best prepended by a comment about the exception
 blacklist: []

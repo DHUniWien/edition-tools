@@ -52,7 +52,7 @@ class TPen (object):
         logging.basicConfig (
             format = '%(asctime)s %(message)s',
             filename = cfg.get ('logfile'),
-            level = cfg.get ('loglevel') and logging.DEBUG or logging.ERROR,
+            level = cfg.get ('loglevel'),
         )
 
         # login in
