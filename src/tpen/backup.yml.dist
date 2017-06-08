@@ -19,3 +19,6 @@ max_errors: 3
 uri_index: http://t-pen.org/TPEN/index.jsp
 uri_login:  http://t-pen.org/TPEN/login.jsp
 uri_project: http://t-pen.org/TPEN/project/
+
+whitelist: []
+blacklist: []

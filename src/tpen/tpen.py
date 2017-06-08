@@ -105,7 +105,7 @@ class TPen (object):
 
     def projects_list (self):
         """ get a list of all projects of logged in account
-            the list consists of dicts with the two keys label and project_id
+            the list consists of dicts with the two keys label and tpen_id
         """
 
         projects = []
@@ -125,7 +125,7 @@ class TPen (object):
 
             label and match and projects.append (dict (
                 label = tr.get ('title'),
-                project_id = match.group (1),
+                tpen_id = match.group (1),
             ))
 
         return projects
@@ -141,7 +141,7 @@ class TPen (object):
         errors  = 0
 
         while errors < self.max_errors and not file_ok:
-            res = self._request (self.uri_project + str (project.get ('project_id')))
+            res = self._request (self.uri_project + str (project.get ('tpen_id')))
 
             # T-PEN sets the Content-Type header to either
             # "application/ld+json;charset=UTF-8" or "text/plain; charset=utf-8"
@@ -153,7 +153,7 @@ class TPen (object):
 
                 logging.info (
                     '[%s, "%s"] got unexpected content-type "%s", expected: "%s" (try %s)' % (
-                        project.get ('project_id'),
+                        project.get ('tpen_id'),
                         project.get ('label'),
                         res.headers.get ('Content-Type'),
                         'application/ld+json;charset=UTF-8',
@@ -166,14 +166,14 @@ class TPen (object):
 
         if file_ok:
             logging.debug ('[%s, "%s"] file looks good',
-                project.get ('project_id'),
+                project.get ('tpen_id'),
                 project.get ('label'),
             )
             project.update (data = res.text)
         else:
             self._global_errors['bad_file'] += 1
             logging.error ('[%s, %s] skipping file',
-                project.get ('project_id'),
+                project.get ('tpen_id'),
                 project.get ('label'),
             )
             project.update (
