@@ -75,7 +75,7 @@ jobs:
                   cd tpen-data-bumped
                   [ -d transcription/tei-xml ] || mkdir transcription/tei-xml/
 
-                  python3 ../moe-data/ci/resources/json2xml.py -w transcription/ transcription/tei-xml/
+                  python3 ../moe-data/ci/resources/json2xml.py transcription/ transcription/tei-xml/
 
                   git config --global user.email "DHUniWienMU@foo.bar"
                   git config --global user.name "DHUniWienMU"
