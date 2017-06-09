@@ -1,11 +1,11 @@
 import logging
 import os
+import fnmatch
 import sys
 import pprint
+import argparse
 
 from tpen2tei.wordtokenize import from_string
-
-PATH = './transcription/tei-xml/'
 
 
 def milestones ():
@@ -152,37 +152,9 @@ def milestones ():
     )
 
 
-def witnesses():
-    return [
-        dict (
-            name = "M1731 (F)",
-            files = [
-                "M1731 (F).json.tei.xml",    # aka "M1731 (F) 0.json.tei.xml",
-                "M1731 (F) 0.json.tei.xml",
-                "M1731 (F) 2.json.tei.xml",
-                "M1731 (F) 3.json.tei.xml",
-            ],
-        ),
-        dict (
-            name = "V901 (X)",
-            files = [
-                "V901 (X) 1.json.tei.xml",
-                "V901 (X) 2.json.tei.xml",
-            ],
-        ),
-        dict (
-            name = "Bz449 (K)",
-            files = [
-                "Bz449 (K) .json.tei.xml",  # aka "Bz449 (K) 0.json.tei.xml",
-                "Bz449 (K) 1.json.tei.xml",
-                "Bz449 (K) 2.json.tei.xml",
-                "Bz449 (K) 3.json.tei.xml",
-            ],
-        ),
-    ]
-
-
-def collate_em_all():
+def collate_em_all(**kwa):
+    indir = kwa.get ('indir')
+    outdir = kwa.get ('outdir')
 
     # collation = list (
     #     dict ( milestone = 401, witnesses = [ witness-1, witnesses-2, ..] ),
@@ -191,29 +163,27 @@ def collate_em_all():
     #
     collation = list()
 
-    for m in milestones():
+    for milestone in milestones():
         ws = list()
 
-        for w in witnesses():
-            # TODO will nedlessly try all files even if already done
-            for f in w.get ('files'):
+        for infile in fnmatch.filter (os.listdir (indir), '*tei.xml'):
 
-                collatex = tei2collatex (
-                    xmlfile = f,
-                    milestone = m,
-                )
+            collatex = tei2collatex (
+                xmlfile   = indir + '/' + infile,
+                milestone = milestone,
+            )
 
-                if collatex:
-                    ws.append (dict (
-                        witness = w.get ('name'),
-                        data    = collatex,
-                    ))
-                    logging.info ('[%s:%s:%s] wheee!' % (m, w.get ('name'), f))
-                else:
-                    logging.info ('[%s:%s:%s] no data for CollateX' % (m, w.get ('name'), f))
+            if collatex:
+                ws.append (dict (
+                    witness = infile,
+                    data    = collatex,
+                ))
+                logging.info ('[%s:%s] wheee!' % (milestone, infile))
+            else:
+                logging.info ('[%s:%s] no data for CollateX' % (milestone, infile))
 
         collation.append (dict (
-            milestone = m,
+            milestone = milestone,
             witnesses = ws,
         ))
 
@@ -228,7 +198,7 @@ def tei2collatex (**kwa):
     milestone = kwa.get ('milestone')
 
     try:
-        with open (PATH + xmlfile, encoding = 'utf-8') as fh:
+        with open (xmlfile, encoding = 'utf-8') as fh:
             return from_string (
                 fh.read(),
                 milestone    = milestone,
@@ -238,15 +208,18 @@ def tei2collatex (**kwa):
         logging.info ('file not found: %s' % xmlfile)
 
 
-#import argparse
-#args = None
 
 if __name__ == '__main__':
 
-    # parser = argparse.ArgumentParser()
-    # parser.add_argument ("indir", help = "")
-    # parser.add_argument ("-f", "--flag", action = "flag", help = "this flag")
-    # args = parser.parse_args()
+    parser = argparse.ArgumentParser()
+    parser.add_argument (
+         "indir",
+         help = "input directory t-pen output files",
+    )
+    parser.add_argument (
+        "outdir",
+        help = "output directory",
+    )
 
     logging.basicConfig (
         format = '%(asctime)s %(message)s',
@@ -254,5 +227,13 @@ if __name__ == '__main__':
         level = logging.NOTSET,
     )
 
+    args = parser.parse_args()
+
     with open ('./collation.json', 'w') as out:
-        pprint.pprint (collate_em_all(), out)
+        pprint.pprint (
+            collate_em_all (
+                indir = args.indir,
+                outdir = args.outdir,
+            ),
+            out,
+        )
