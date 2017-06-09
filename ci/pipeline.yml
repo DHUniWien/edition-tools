@@ -156,14 +156,14 @@ jobs:
               - name: tpen-data
               - name: moe-data
             outputs:
-              - out
+              - name: out
 
             run:
               path: sh
               args:
                 - -exc
                 - |
-                  python3 collate.py  tpen-data/transcription/tei-xml/ out/
+                  python3 moe-data/ci/resources/collate.py  tpen-data/transcription/tei-xml/ out/
 
 
         #- task: upload
