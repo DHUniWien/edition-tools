@@ -134,30 +134,37 @@ jobs:
                   IFS=$SAVEIFS
                   exit 0
 
-        #- task: collate
+    - name: collate
+      plan:
+        - aggregate:
+          - get: tpen-data
+            trigger: true
+            passed: [validate-tei-xml]
+          - get: moe-data
 
-        #  config:
-        #    platform: linux
-        #    image_resource:
-        #      type: docker-image
-        #      source:
-        #        repository: {{tools-image}}
-        #        insecure_registries: [ {{insecure-registries}} ]
+        - task: task-collate
 
-        #    inputs:
-        #      - name: tei-xml
-        #    outputs:
-        #      - name: collated
+          config:
+            platform: linux
+            image_resource:
+              type: docker-image
+              source:
+                repository: {{tools-image}}
+                insecure_registries: [ {{insecure-registries}} ]
 
-        #    run:
-        #      path: sh
-        #      args:
-        #        - -exc
-        #        - |
-        #          ls
-        #          ls /root
-        #          pwd
-        #          java -jar /root/collatex.jar -h
+            inputs:
+              - name: tpen-data
+              - name: moe-data
+            outputs:
+              - out
+
+            run:
+              path: sh
+              args:
+                - -exc
+                - |
+                  python3 collate.py  tpen-data/transcription/tei-xml/ out/
+
 
         #- task: upload
 

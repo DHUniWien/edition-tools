@@ -152,35 +152,44 @@ def milestones ():
     )
 
 
-def collate_em_all(**kwa):
+def teixml2collatex (**kwa):
     indir = kwa.get ('indir')
-    outdir = kwa.get ('outdir')
 
-    # collation = list (
-    #     dict ( milestone = 401, witnesses = [ witness-1, witnesses-2, ..] ),
-    #     dict ( milestone = 407, witnesses = [ witness-1, witnesses-2, ..] ),
-    # )
-    #
+    # list elements are already so
+    # that collatex can digest them
     collation = list()
 
     for milestone in milestones():
-        ws = list()
+        ws = dict (witnesses = list())
 
+        # walk through all available witnesses
+        # and look for the current milestone
+        #
+        # presume: one witness per file
         for infile in fnmatch.filter (os.listdir (indir), '*tei.xml'):
 
-            collatex = tei2collatex (
+            # XXX better get this from the .tei.xml
+            witness_name = infile[:infile.find('.')]
+
+            tokens = extract_tokens (
                 xmlfile   = indir + '/' + infile,
                 milestone = milestone,
             )
 
-            if collatex:
-                ws.append (dict (
-                    witness = infile,
-                    data    = collatex,
+            if tokens:
+                ws.get ('witnesses').append (dict (
+                    id     = witness_name,
+                    tokens = tokens,
                 ))
-                logging.info ('[%s:%s] wheee!' % (milestone, infile))
+                logging.info ('milestone <%s> found in witness file <%s>' % (
+                    milestone,
+                    infile,
+                ))
             else:
-                logging.info ('[%s:%s] no data for CollateX' % (milestone, infile))
+                logging.info ('milestone <%s> not found in witness file <%s>' % (
+                    milestone,
+                    infile,
+                ))
 
         collation.append (dict (
             milestone = milestone,
@@ -190,7 +199,7 @@ def collate_em_all(**kwa):
     return collation
 
 
-def tei2collatex (**kwa):
+def extract_tokens (**kwa):
     """ returns json
     """
 
@@ -206,7 +215,10 @@ def tei2collatex (**kwa):
             )
     except FileNotFoundError:
         logging.info ('file not found: %s' % xmlfile)
-
+    except:
+        logging.info ('exception type: %s' % sys.exc_info()[0])
+        logging.info ('exception value: %s' % sys.exc_info()[1])
+        logging.info ('exception trace: %s' % sys.exc_info()[2])
 
 
 if __name__ == '__main__':
@@ -229,11 +241,9 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    with open ('./collation.json', 'w') as out:
-        pprint.pprint (
-            collate_em_all (
-                indir = args.indir,
-                outdir = args.outdir,
-            ),
-            out,
-        )
+    for c in teixml2collatex (indir = args.indir):
+        if c.get ('witnesses'):
+            outfile = '%s/milestone-%s.json' % (args.outdir, c.get ('milestone'))
+
+            with open (outfile, 'w') as fh:
+                pprint.pprint (c.get ('witnesses'), fh)
