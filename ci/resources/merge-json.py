@@ -42,10 +42,10 @@ def main (args):
 
         out = dict (
             metadata = metadata,
-            sequences = list (dict (
+            sequences = [ dict (
                 # flatten out canvases
                 canvases = [c for perfile in canvases for c in perfile]
-            )),
+            ) ],
         )
 
         json.dump (out, open ('%s/%s-merged.json' % (args.outdir, key), 'w'), sort_keys = True, indent = 4)
