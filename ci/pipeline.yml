@@ -74,12 +74,15 @@ jobs:
 
                   cd tpen-data-bumped
 
-                  # # first, merge files
+                  ### use merged files
                   # [ -d transcription/merged ] || mkdir transcription/merged/
                   # python3 ../moe-data/ci/resources/merge-json.py transcription/ transcription/merged
+                  # [ -d transcription/tei-xml ] || mkdir transcription/tei-xml/
+                  # python3 ../moe-data/ci/resources/json2xml.py transcription/merged transcription/tei-xml/
 
+                  ### use files as they come from T-PEN
                   [ -d transcription/tei-xml ] || mkdir transcription/tei-xml/
-                  python3 ../moe-data/ci/resources/json2xml.py transcription/merged transcription/tei-xml/
+                  python3 ../moe-data/ci/resources/json2xml.py transcription/ transcription/tei-xml/
 
                   git config --global user.email "DHUniWienMU@foo.bar"
                   git config --global user.name "DHUniWienMU"
