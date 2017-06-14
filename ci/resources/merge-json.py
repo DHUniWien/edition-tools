@@ -48,7 +48,7 @@ def main (args):
             ),
         )
 
-        json.dump (out, open ('%s/%s.json.merged' % (args.outdir, key), 'w'), sort_keys = True, indent = 4)
+        json.dump (out, open ('%s/%s-merged.json' % (args.outdir, key), 'w'), sort_keys = True, indent = 4)
 
 
 if __name__ == "__main__":
