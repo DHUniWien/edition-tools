@@ -171,7 +171,7 @@ jobs:
                 - -exc
                 - |
                   echo "rearrange data for collatex ..."
-                  python3 moe-data/ci/resources/collate.py  tpen-data/transcription/tei-xml/ out/
+                  python3 moe-data/ci/resources/xml2collatex.py  tpen-data/transcription/tei-xml/ out/
                   
                   SAVEIFS=$IFS
                   IFS=$(echo -en "\n\b")
@@ -179,9 +179,12 @@ jobs:
                   sh -c '
                       for FILE in out/milestone-*.json
                       do
+                          echo "executing: java -jar /root/collatex.jar $FILE > $FILE.collatex"
+                          date
                           java -jar /root/collatex.jar $FILE > $FILE.collatex
                       done
                   '
+                  date
 
                   IFS=$SAVEIFS
                   exit 0
