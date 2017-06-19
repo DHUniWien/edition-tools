@@ -75,14 +75,14 @@ jobs:
                   cd tpen-data-bumped
 
                   ### use merged files
-                  # [ -d transcription/merged ] || mkdir transcription/merged/
-                  # python3 ../moe-data/ci/resources/merge-json.py transcription/ transcription/merged
-                  # [ -d transcription/tei-xml ] || mkdir transcription/tei-xml/
-                  # python3 ../moe-data/ci/resources/json2xml.py transcription/merged transcription/tei-xml/
-
-                  ### use files as they come from T-PEN
+                  [ -d transcription/merged ] || mkdir transcription/merged/
+                  python3 ../moe-data/ci/resources/merge-json.py transcription/ transcription/merged
                   [ -d transcription/tei-xml ] || mkdir transcription/tei-xml/
-                  python3 ../moe-data/ci/resources/json2xml.py transcription/ transcription/tei-xml/
+                  python3 ../moe-data/ci/resources/json2xml.py transcription/merged transcription/tei-xml/
+
+                  # ### use files as they come from T-PEN
+                  # [ -d transcription/tei-xml ] || mkdir transcription/tei-xml/
+                  # python3 ../moe-data/ci/resources/json2xml.py transcription/ transcription/tei-xml/
 
                   git config --global user.email "DHUniWienMU@foo.bar"
                   git config --global user.name "DHUniWienMU"
@@ -170,8 +170,21 @@ jobs:
               args:
                 - -exc
                 - |
+                  echo "rearrange data for collatex ..."
                   python3 moe-data/ci/resources/collate.py  tpen-data/transcription/tei-xml/ out/
-                  echo "data prepared for collatex is in the build containers output 'out'"
+                  
+                  SAVEIFS=$IFS
+                  IFS=$(echo -en "\n\b")
+
+                  sh -c '
+                      for FILE in out/milestone-*.json
+                      do
+                          java -jar /root/collatex.jar $FILE > $FILE.collatex
+                      done
+                  '
+
+                  IFS=$SAVEIFS
+                  exit 0
 
 
         #- task: upload
