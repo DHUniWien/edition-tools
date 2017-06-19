@@ -247,4 +247,4 @@ if __name__ == '__main__':
             outfile = '%s/milestone-%s.json' % (args.outdir, c.get ('milestone'))
 
             with open (outfile, 'w') as fh:
-                json.dump (c.get ('witnesses'), fh))
+                json.dump (c.get ('witnesses'), fh)
