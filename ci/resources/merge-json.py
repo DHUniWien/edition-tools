@@ -13,31 +13,163 @@ import json
 import itertools
 
 
+def manuscripts ():
+    return [
+        { 'name' : 'Bz449',
+          'files' : ['Bz449 (K) .json'],
+        },
+        { 'name' : 'Bzommar, Armenian Catholic Clergy Institute 430',
+          'files' : ['Bzommar, Armenian Catholic Clergy Institute 430.json'],
+        },
+        { 'name' : 'M1731',
+          'files' : [
+            'M1731 (F) 1.json',
+            'M1731 (F) 2.json',
+            'M1731 (F) 3.json',
+          ]
+        },
+        { 'name' : 'M1767',
+          'files' : [
+            'M1767 (B) 1.json',
+            'M1767 (B) 2.json',
+            'M1767 (B) 3.json',
+            'M1767 (B) 4.json',
+            'M1767 (B) 5.json',
+            'M1767 (B) 6.json',
+            'M1767 (B) 7.json',
+          ]
+        },
+        { 'name' : 'M1768',
+          'files' : [
+            'M1768 (H) 1.json',
+            'M1768 (H) 2.json',
+            'M1768 (H) 3.json',
+          ]
+        },
+        { 'name' : 'M1768',
+          'files' : [
+            'M1769 (I) 1.json',
+            'M1769 (I) 2.json',
+            'M1769 (I) 3.json',
+          ]
+        },
+        { 'name' : 'M1896',
+          'files' : [
+            'M1896 (A).json',
+            'M1896 (A) 2.json',
+            'M1896 (A) 3.json',
+            'M1896 (A) 4.json',
+          ]
+        },
+        { 'name' : 'M2644',
+          'files' : [
+            'M2644 (G) 1.json',
+            'M2644 (G) 2.json',
+          ]
+        },
+
+        { 'name' : 'M3017',
+          'files' : [
+            'M3071 (C).json',
+          ]
+        },
+
+        { 'name' : 'M3519',
+          'files' : [
+            'M3519 (D).json',
+          ]
+        },
+
+        { 'name' : 'M3520',
+          'files' : [
+            'M3520 (E) 1.json',
+            'M3520 (E) 2.json',
+            'M3520 (E) 3.json',
+            'M3520 (E) 4.json',
+          ]
+        },
+
+        { 'name' : 'M5587',
+          'files' : [
+            'M5587 (J).json',
+            'M5587 (J) 1.json',
+            'M5587 (J) 2.json',
+            'M5587 (J) 3.json',
+            'M5587 (J) 4.json',
+          ]
+        },
+        { 'name' : 'OXE32',
+          'files' : [
+            'Ox e.32 (O).json',
+            'Ox e.32 (O) 1.json',
+            'Ox e.32 (O) 2.json',
+            'Ox e.32 (O) 3.json',
+            'Oxford, Bodleian Library Missing pages.json',
+          ]
+        },
+        { 'name' : 'V887',
+          'files' : [
+            'V887 (V) 1.json',
+            'V887 (V) 2.json',
+            'V887 (V) 3.json',
+          ]
+        },
+        { 'name' : 'V901',
+          'files' : [
+            'V901 (X) 1.json',
+            'V901 (X) 2.json',
+          ]
+        },
+        { 'name' : 'V913',
+          'files' : [
+            'V913 (Y).json',
+          ]
+        },
+        { 'name' : 'V917',
+          'files' : [
+            'V917 (Z).json',
+            'V917 (Z) 1.json',
+            'V917 (Z) 2.json',
+          ]
+        },
+        { 'name' : 'W243',
+          'files' : [
+            'W243 1.json',
+            'W243 2.json',
+          ]
+        },
+        { 'name' : 'W246',
+          'files' : [
+            'W246.json',
+          ]
+        },
+        { 'name' : 'W574 old',
+          'files' : [
+            'W574 old 1.json',
+            'W574 old 2.json',
+          ]
+        },
+        { 'name' : 'W574',
+          'files' : [
+            'W574 (W) 1.json',
+            'W574 (W) 2.json',
+          ]
+        },
+    ]
+
+
 def main (args):
-    # n ... name
-    # c ... code
-    # s ... sequence
-    #
-    # "M5587 (J) 1"
-    #  n      c  s
-    #
-    prog = re.compile ('(?P<name>[a-zA-z0-9]*)(?: \((?P<code>\w)\))?(?: (?P<sequence>\d))?')
+    for (name, files) in [(m['name'], m['files']) for m in manuscripts()]:
 
-    res = itertools.groupby (
-        sorted (fnmatch.filter (os.listdir (args.indir), '*json')),
-        lambda key: prog.match (key).group ('name')
-    )
+        files = list (files)
 
-    for key, group in res:
-        group = list (group)
-
-        head_file = list (group).pop()
+        head_file = list (files).pop()
         metadata = json.load (open ('%s/%s' % (args.indir, head_file))).get ('metadata')
 
         # becomes a list of ( list of objects/canvases)
         canvases = [
             json.load (open ('%s/%s' % (args.indir, part))).get ('sequences')[0].get ('canvases')
-            for part in group
+            for part in files
         ]
 
         out = dict (
@@ -48,7 +180,7 @@ def main (args):
             ) ],
         )
 
-        json.dump (out, open ('%s/%s-merged.json' % (args.outdir, key), 'w'), sort_keys = True, indent = 4)
+        json.dump (out, open ('%s/%s-merged.json' % (args.outdir, name), 'w'), sort_keys = True, indent = 4)
 
 
 if __name__ == "__main__":
