@@ -4,6 +4,7 @@ import fnmatch
 import sys
 import pprint
 import argparse
+import json
 
 from tpen2tei.wordtokenize import from_string
 
@@ -246,4 +247,4 @@ if __name__ == '__main__':
             outfile = '%s/milestone-%s.json' % (args.outdir, c.get ('milestone'))
 
             with open (outfile, 'w') as fh:
-                pprint.pprint (c.get ('witnesses'), fh)
+                json.dump (c.get ('witnesses'), fh))
