@@ -179,8 +179,8 @@ jobs:
                   sh -c '
                       for FILE in out/milestone-*.json
                       do
-                          echo "executing: java -jar /root/collatex.jar $FILE > $FILE.collatex"
                           date
+                          echo "executing: java -jar /root/collatex.jar $FILE > $FILE.collatex"
                           java -jar /root/collatex.jar $FILE > $FILE.collatex
                       done
                   '
