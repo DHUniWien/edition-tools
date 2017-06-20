@@ -182,10 +182,11 @@ jobs:
 
                   echo "running collatex ..."
                   sh -c '
+                      cd collatex
                       for FILE in milestone-*.json
                       do
-                          IN_FILE=collatex/$FILE
-                          OUT_FILE=collatex-out/$FILE
+                          IN_FILE=$FILE
+                          OUT_FILE=../collatex-out/$FILE
                           COMMAND="java -jar /root/collatex.jar --format json $IN_FILE --output $OUT_FILE"
                           echo `date -R` $COMMAND
                           $COMMAND
