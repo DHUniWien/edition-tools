@@ -77,6 +77,8 @@ jobs:
                   ### use merged files
                   [ -d transcription/merged ] || mkdir transcription/merged/
                   python3 ../moe-data/ci/resources/merge-json.py transcription/ transcription/merged
+
+                  ### create TEI-XML
                   [ -d transcription/tei-xml ] || mkdir transcription/tei-xml/
                   python3 ../moe-data/ci/resources/json2xml.py transcription/merged transcription/tei-xml/
 
@@ -163,7 +165,8 @@ jobs:
               - name: tpen-data
               - name: moe-data
             outputs:
-              - name: out
+              - name: collatex
+              - name: collatex-out
 
             run:
               path: sh
@@ -171,19 +174,25 @@ jobs:
                 - -exc
                 - |
                   echo "rearrange data for collatex ..."
-                  python3 moe-data/ci/resources/xml2collatex.py  tpen-data/transcription/tei-xml/ out/
-                  
+                  python3 moe-data/ci/resources/teixml2collatex.py tpen-data/transcription/tei-xml/ collatex
+
                   SAVEIFS=$IFS
                   IFS=$(echo -en "\n\b")
 
                   sh -c '
-                      for FILE in out/milestone-*.json
+                      for FILE in collatex/milestone-*.json
                       do
                           date
-                          echo "executing: java -jar /root/collatex.jar $FILE > $FILE.collatex"
+                          echo "executing: java -jar /root/collatex.jar --format json $FILE > collatex-out/$FILE"
                           java -jar /root/collatex.jar $FILE > $FILE.collatex
                       done
                   '
+                  date
+
+                  echo "pretty print collatex's output ..."
+                  mkdir collatex-out-pretty
+                  python3 moe-data/ci/resources/beautify-json.py collatex-out/ collatex-out-pretty
+
                   date
 
                   IFS=$SAVEIFS

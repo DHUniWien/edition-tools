@@ -247,4 +247,10 @@ if __name__ == '__main__':
             outfile = '%s/milestone-%s.json' % (args.outdir, c.get ('milestone'))
 
             with open (outfile, 'w') as fh:
-                json.dump (c.get ('witnesses'), fh, ensure_ascii=False)
+                json.dump (
+                    c.get ('witnesses'),
+                    fh,
+                    ensure_ascii = False,
+                    indent = 4,
+                    check_circular = True,
+                )
