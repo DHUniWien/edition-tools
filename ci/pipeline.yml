@@ -197,7 +197,7 @@ jobs:
                   echo "pretty print collatex's output ..."
                   python3 moe-data/ci/resources/beautify-json.py collatex-out/ collatex-out-pretty/
 
-                  date -R
+                  echo `date -R` done
 
                   IFS=$SAVEIFS
                   exit 0
