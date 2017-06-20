@@ -6,8 +6,8 @@ import json
 
 def run (args):
     for infile in fnmatch.filter (os.listdir (args.indir), '*json'):
+        json_in = json.load (open ('%s/%s' % (args.indir, infile), 'r'))
         outfile = '%s/%s' % (args.outdir, infile)
-        json_in = json.load (open (infile, 'r'))
 
         with open (outfile, 'w') as fh_out:
             json.dump (
