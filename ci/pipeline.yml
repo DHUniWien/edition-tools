@@ -167,6 +167,7 @@ jobs:
             outputs:
               - name: collatex
               - name: collatex-out
+              - name: collatex-out-pretty
 
             run:
               path: sh
@@ -179,21 +180,23 @@ jobs:
                   SAVEIFS=$IFS
                   IFS=$(echo -en "\n\b")
 
+                  echo "running collatex ..."
                   sh -c '
-                      for FILE in collatex/milestone-*.json
+                      for FILE in milestone-*.json
                       do
-                          date
-                          echo "executing: java -jar /root/collatex.jar --format json $FILE > collatex-out/$FILE"
-                          java -jar /root/collatex.jar $FILE > $FILE.collatex
+                          IN_FILE=collatex/$FILE
+                          OUT_FILE=collatex-out/$FILE
+                          COMMAND="java -jar /root/collatex.jar --format json $IN_FILE --output $OUT_FILE"
+                          echo `date -R` $COMMAND
+                          $COMMAND
                       done
+                      echo `date -R` done
                   '
-                  date
 
                   echo "pretty print collatex's output ..."
-                  mkdir collatex-out-pretty
-                  python3 moe-data/ci/resources/beautify-json.py collatex-out/ collatex-out-pretty
+                  python3 moe-data/ci/resources/beautify-json.py collatex-out/ collatex-out-pretty/
 
-                  date
+                  date -R
 
                   IFS=$SAVEIFS
                   exit 0
