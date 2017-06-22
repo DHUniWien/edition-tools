@@ -104,7 +104,6 @@ def manuscripts ():
             'Ox e.32 (O) 1.json',
             'Ox e.32 (O) 2.json',
             'Ox e.32 (O) 3.json',
-            'Oxford, Bodleian Library Missing pages.json',
           ]
         },
         { 'name' : 'V887',
