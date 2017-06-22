@@ -55,7 +55,7 @@ def manuscripts ():
         },
         { 'name' : 'M1896',
           'files' : [
-            'M1896 (A).json',
+            'M1896 (A) 1.json',
             'M1896 (A) 2.json',
             'M1896 (A) 3.json',
             'M1896 (A) 4.json',
@@ -91,7 +91,7 @@ def manuscripts ():
 
         { 'name' : 'M5587',
           'files' : [
-            'M5587 (J).json',
+            'M5587 (J) 0.json',
             'M5587 (J) 1.json',
             'M5587 (J) 2.json',
             'M5587 (J) 3.json',
@@ -100,7 +100,7 @@ def manuscripts ():
         },
         { 'name' : 'OXE32',
           'files' : [
-            'Ox e.32 (O).json',
+            'Ox e.32 (O) 0.json',
             'Ox e.32 (O) 1.json',
             'Ox e.32 (O) 2.json',
             'Ox e.32 (O) 3.json',
@@ -127,7 +127,7 @@ def manuscripts ():
         },
         { 'name' : 'V917',
           'files' : [
-            'V917 (Z).json',
+            'V917 (Z) 0.json',
             'V917 (Z) 1.json',
             'V917 (Z) 2.json',
           ]
