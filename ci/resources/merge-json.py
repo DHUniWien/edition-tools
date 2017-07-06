@@ -162,7 +162,7 @@ def main (args):
 
         files = list (files)
 
-        head_file = list (files).pop()
+        head_file = list (files).pop(0)
         metadata = json.load (open ('%s/%s' % (args.indir, head_file))).get ('metadata')
 
         # becomes a list of ( list of objects/canvases)

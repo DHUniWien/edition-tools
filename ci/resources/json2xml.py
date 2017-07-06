@@ -13,7 +13,8 @@ def metadata():
     """Return a dictionary suitable for the 'metadata' parameter to from_sc."""
     return {
         'title': 'Ժամանակագրութիւն',
-        'author': 'Մատթէոս Ուռհայեցի'
+        'author': 'Մատթէոս Ուռհայեցի',
+        'short_error': True
     }
 
 def special_chars():
