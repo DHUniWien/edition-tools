@@ -198,11 +198,11 @@ jobs:
                           SVG_FILE=collatex-out-svg/$NAME.svg
 
                           # json will be bautified later
-                          CMD_COLLATE_JSON="java -jar /root/collatex.jar --format json $IN_FILE --output $OUT_FILE_JSON"
+                          CMD_COLLATE_JSON="java -jar /root/collatex.jar --tokenized --format json $IN_FILE --output $OUT_FILE_JSON"
 
                           # dot2svg
-                          CMD_COLLATE_DOT="java -jar /root/collatex.jar --format dot $IN_FILE --output $OUT_FILE_DOT"
-                          CMD_SVG="dot -Tsvg $OUT_FILE_DOT -o $SVG_FILE"
+                          CMD_COLLATE_DOT="java -jar /root/collatex.jar --tokenized --format dot $IN_FILE --output $OUT_FILE_DOT"
+                          CMD_SVG="dot -Grankdir=LR -Tsvg $OUT_FILE_DOT -o $SVG_FILE"
 
                           echo `date -R`: $CMD_COLLATE_JSON
                           $CMD_COLLATE_JSON
@@ -252,3 +252,7 @@ jobs:
                       -i ${SSH_KEYS_DIR}/storage/ci-id_rsa"
 
                   $SCP -r collatex-out-svg/ ci@storage.stemmaweb.net:/home/ci/www/moe-data/
+
+                  echo "SVG files copied to webspace, visit https://www.ci.stemmaweb.net/moe-data/"
+                  echo "Authentication is required, contact someone about that."
+                  echo "Bye, bye ;-)"
