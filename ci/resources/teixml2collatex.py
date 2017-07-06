@@ -5,6 +5,7 @@ import sys
 import pprint
 import argparse
 import json
+import re
 
 from tpen2tei.wordtokenize import from_string
 
