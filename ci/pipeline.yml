@@ -150,6 +150,7 @@ jobs:
             trigger: true
             passed: [validate-tei-xml]
           - get: moe-data
+          - get: ssh-keys
 
         - task: task-collate
 
@@ -164,9 +165,11 @@ jobs:
             inputs:
               - name: tpen-data
               - name: moe-data
+              - name: ssh-keys
             outputs:
               - name: collatex
               - name: collatex-out
+              - name: collatex-out-svg
               - name: collatex-out-pretty
 
             run:
@@ -177,20 +180,40 @@ jobs:
                   echo "rearrange data for collatex ..."
                   python3 moe-data/ci/resources/teixml2collatex.py tpen-data/transcription/tei-xml/ collatex
 
+                  echo "install graphviz (graphviz is not yet part of the tools image) ..."
+                  apk add graphviz
+
                   SAVEIFS=$IFS
                   IFS=$(echo -en "\n\b")
 
                   echo "running collatex ..."
                   sh -c '
-                      cd collatex
-                      for FILE in milestone-*.json
+                      for IN_FILE in collatex/milestone-*.json
                       do
-                          IN_FILE=$FILE
-                          OUT_FILE=../collatex-out/$FILE
-                          COMMAND="java -jar /root/collatex.jar --format json $IN_FILE --output $OUT_FILE"
-                          echo `date -R` $COMMAND
-                          $COMMAND
+                          NAME=${IN_FILE##*/}  # strip directory
+                          NAME=${NAME%.*}      # strip file ext.
+
+                          OUT_FILE_JSON=collatex-out/$NAME.json
+                          OUT_FILE_DOT=collatex-out/$NAME.dot
+                          SVG_FILE=collatex-out-svg/$NAME.svg
+
+                          # json will be bautified later
+                          CMD_COLLATE_JSON="java -jar /root/collatex.jar --format json $IN_FILE --output $OUT_FILE_JSON"
+
+                          # dot2svg
+                          CMD_COLLATE_DOT="java -jar /root/collatex.jar --format dot $IN_FILE --output $OUT_FILE_DOT"
+                          CMD_SVG="dot -Tsvg $OUT_FILE_DOT -o $SVG_FILE"
+
+                          echo `date -R`: $CMD_COLLATE_JSON
+                          $CMD_COLLATE_JSON
+
+                          echo `date -R`: $CMD_COLLATE_DOT
+                          $CMD_COLLATE_DOT
+
+                          echo `date -R`: $CMD_SVG
+                          $CMD_SVG
                       done
+
                       echo `date -R` done
                   '
 
@@ -202,25 +225,30 @@ jobs:
                   IFS=$SAVEIFS
                   exit 0
 
+        - task: task-copy
 
-        #- task: upload
+          config:
+            platform: linux
+            image_resource:
+              type: docker-image
+              source:
+                repository: {{tools-image}}
+                insecure_registries: [ {{insecure-registries}} ]
 
-        #  config:
-        #    platform: linux
-        #    image_resource:
-        #      type: docker-image
-        #      source:
-        #        repository: {{tools-image}}
-        #        insecure_registries: [ {{insecure-registries}} ]
+            inputs:
+              - name: ssh-keys
+              - name: collatex-out-svg
 
-        #    inputs:
-        #      - name: collated
+            run:
+              path: sh
+              args:
+                - -exc
+                - |
+                  SSH_KEYS_DIR=ssh-keys
+                  /bin/chmod 600 ${SSH_KEYS_DIR}/storage/ci-id_rsa
 
-        #    run:
-        #      path: echo
-        #      dir: data
-        #      args: ["feed stemmarest"]
+                  SCP="/usr/bin/scp \
+                      -o StrictHostKeyChecking=no \
+                      -i ${SSH_KEYS_DIR}/storage/ci-id_rsa"
 
-        #- put: version
-        #  params:
-        #    bump: patch
+                  $SCP -r collatex-out-svg/ ci@storage.stemmaweb.net:/home/ci/www/moe-data/
