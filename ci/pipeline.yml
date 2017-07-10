@@ -33,6 +33,19 @@ resources:
         uri: {{ssh-keys-uri}}
         private_key: {{DHUniWienMU-priv-key}}
 
+    - name: stemmarest-sources
+      type: git
+      source:
+        uri: {{stemmarest-sources-uri}}
+        branch: {{stemmarest-sources-branch}}
+        paths: [stemmarest, ci/resources]
+
+    - name: stemmarest-config
+      type: git
+      source:
+        uri: {{stemmarest-config-uri}}
+        private_key: {{DHUniWienMU-priv-key}}
+
 
 jobs:
 
@@ -55,7 +68,7 @@ jobs:
                 insecure_registries: [ {{insecure-registries}} ]
 
             inputs:
-              - name: tpen-data
+              ### - name: tpen-data
               - name: moe-data
               - name: ssh-keys
             outputs:
@@ -152,6 +165,9 @@ jobs:
           - get: moe-data
           - get: ssh-keys
 
+          - get: stemmarest-sources
+          - get: stemmarest-config
+
         - task: task-collate
 
           config:
@@ -171,6 +187,7 @@ jobs:
               - name: collatex-out
               - name: collatex-out-svg
               - name: collatex-out-pretty
+              - name: tpen-data-bumped
 
             run:
               path: sh
@@ -193,19 +210,19 @@ jobs:
                           NAME=${IN_FILE##*/}  # strip directory
                           NAME=${NAME%.*}      # strip file ext.
 
-                          ### OUT_FILE_JSON=collatex-out/$NAME.json
+                          OUT_FILE_JSON=collatex-out/$NAME.json
                           OUT_FILE_DOT=collatex-out/$NAME.dot
                           SVG_FILE=collatex-out-svg/$NAME.svg
 
-                          ### # json will be bautified later
-                          ### CMD_COLLATE_JSON="java -jar /root/collatex.jar --tokenized --format json $IN_FILE --output $OUT_FILE_JSON"
+                          # json will be bautified later
+                          CMD_COLLATE_JSON="java -jar /root/collatex.jar --tokenized --format json $IN_FILE --output $OUT_FILE_JSON"
 
                           # dot2svg
                           CMD_COLLATE_DOT="java -jar /root/collatex.jar --tokenized --format dot $IN_FILE --output $OUT_FILE_DOT"
                           CMD_SVG="dot -Grankdir=LR -Tsvg $OUT_FILE_DOT -o $SVG_FILE"
 
-                          ### echo `date -R`: $CMD_COLLATE_JSON
-                          ### $CMD_COLLATE_JSON
+                          echo `date -R`: $CMD_COLLATE_JSON
+                          $CMD_COLLATE_JSON
 
                           echo `date -R`: $CMD_COLLATE_DOT
                           $CMD_COLLATE_DOT
@@ -225,7 +242,57 @@ jobs:
                   IFS=$SAVEIFS
                   exit 0
 
-        - task: task-copy
+        - task: task-collatex-to-github
+
+          config:
+            platform: linux
+            image_resource:
+              type: docker-image
+              source:
+                repository: {{tools-image}}
+                insecure_registries: [ {{insecure-registries}} ]
+
+            inputs:
+              - name: ssh-keys
+              - name: collatex-out
+            outputs:
+              - name: tpen-data-bumped
+
+            run:
+              path: sh
+              args:
+                - -exc
+                - |
+                  echo "push output of collatex (json) to github ..."
+
+                  SSH_KEYS_DIR=ssh-keys
+                  /bin/chmod 600 ${SSH_KEYS_DIR}/github/DHUniWienMU-id_rsa
+                  export GIT_SSH_COMMAND="ssh -o StrictHostKeyChecking=no -i ssh-keys/github/DHUniWienMU-id_rsa"
+
+                  git clone {{tpen-data-uri}} tpen-data-bumped
+                  [ -d tpen-data-bumped/transcription/collatex-out ] || mkdir tpen-data-bumped/transcription/collatex-out/
+
+                  cp -r collatex-out/*json tpen-data-bumped/transcription/collatex-out/
+
+                  git config --global user.email "DHUniWienMU@foo.bar"
+                  git config --global user.name "DHUniWienMU"
+
+                  cd tpen-data-bumped/transcription/collatex-out/
+                  git add *json
+
+                  GIT_STATUS=`git status`
+
+                  if echo $GIT_STATUS | grep -q "Changes to be committed:" -;
+                  then
+                      git commit -m "add output of collatex" *json
+                  fi
+
+
+        - put: tpen-data
+          params: {repository: tpen-data-bumped}
+
+
+        - task: task-collatex-to-webspace
 
           config:
             platform: linux
@@ -244,6 +311,8 @@ jobs:
               args:
                 - -exc
                 - |
+                  echo "copy SVG files to webspace for easy access ..."
+
                   SSH_KEYS_DIR=ssh-keys
                   /bin/chmod 600 ${SSH_KEYS_DIR}/storage/ci-id_rsa
 
@@ -254,5 +323,106 @@ jobs:
                   $SCP -r collatex-out-svg/ ci@storage.stemmaweb.net:/home/ci/www/moe-data/
 
                   echo "SVG files copied to webspace, visit https://www.ci.stemmaweb.net/moe-data/"
-                  echo "Authentication is required, contact someone about that."
-                  echo "Bye, bye ;-)"
+
+
+    - name: stemmarest
+      plan:
+        - aggregate:
+          - get: tpen-data
+            trigger: true
+            passed: [collate]
+          # - get: moe-data
+          - get: ssh-keys
+          - get: stemmarest-sources
+          - get: stemmarest-config
+
+        - task: task-create-stemmarest-test
+
+          config:
+            platform: linux
+            image_resource:
+              type: docker-image
+              source:
+                repository: {{tools-image}}
+                insecure_registries: [ {{insecure-registries}} ]
+
+            inputs:
+              - name: ssh-keys
+              - name: stemmarest-config
+              - name: stemmarest-sources
+
+            run:
+              path: sh
+              args:
+                - "stemmarest-sources/ci/resources/deploy.sh"
+                - "stemmarest-config/deploy-moe-data.sh"
+
+
+        - task: task-feed-the-beast
+
+          config:
+            platform: linux
+            image_resource:
+              type: docker-image
+              source:
+                repository: {{tools-image}}
+                insecure_registries: [ {{insecure-registries}} ]
+
+
+            inputs:
+              # - name: ssh-keys
+              # - name: stemmarest-config
+              # - name: stemmarest-sources
+              #
+              - name: tpen-data
+              # - name: collatex-out-svg
+              # - name: collatex-out-pretty
+
+            # WARNING
+            run:
+              path: sh
+              args:
+                - -exc
+                - |
+                  echo 'hi, task-feed-the-beast here!'
+                  ls tpen-data/transcription/collatex-out
+
+                  apk add curl
+
+
+                  # new user
+                  curl \
+                    --request PUT \
+                    --insecure \
+                    --header "Content-Type: application/json" \
+                    --data '{ "role":"admin", "id":"alpha", "email":"alpha@dh.gesch", "passphrase":"yeah!" }' \
+                  https://test.api.stemmaweb.net/moe-data/stemmarest/user/alpha
+
+                  # new tradition
+                  curl \
+                    --request POST \
+                    --insecure \
+                    --header "Content-Type: application/json" \
+                    --form "file=@tpen-data/transcription/collatex-out/milestone-401.json" \
+                    --form "filetype=json" \
+                    --form "userId=alpha" \
+                  https://test.api.stemmaweb.net/moe-data/stemmarest/tradition
+                  TRADITION =
+
+                  for IN_FILE in tpen-data/transcription/collatex-out/milestone-*.json
+                  do
+                      NAME=${IN_FILE##*/}  # strip directory
+                      NAME=${NAME%.*}      # strip file ext.
+
+                  #     curl \
+                  #       --request POST \
+                  #       --insecure \
+                  #       --header "Content-Type: application/json" \
+                  #       --form "file=@${IN_FILE}" \
+                  #       --form "filetype=json" \
+                  #       --form "name=${NAME}" \
+                  #     https://test.api.stemmaweb.net/moe-data/stemmarest/tradition/${TRADITION}/section
+                  done
+
+                  echo "curl --insecure --request GET https://test.api.stemmaweb.net/moe-data/stemmarest/users"
+                  echo "curl --insecure --request GET https://test.api.stemmaweb.net/moe-data/stemmarest/traditions"
