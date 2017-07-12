@@ -73,6 +73,14 @@ def numeric_parser():
         return total
 
     return func
+    
+def transcription_filter():
+    return lambda x: x.replace(
+    '_', '֊').replace(    # fix erroneous underscore use by Razmik
+    '“', '"').replace(    # fix curly quote pasting by Anahit
+    '”', '"').replace(
+    ',', '.')             # MSS have no difference between comma & dot
+    
 
 if __name__ == '__main__':
 
@@ -103,7 +111,8 @@ if __name__ == '__main__':
         indir               = args.indir,
         outdir              = args.outdir,
         write_stdout_stderr = args.write_stdout_stderr,
-        metadata            = metadata(),       # wants a dict
-        special_chars       = special_chars(),  # wants a dict
-        numeric_parser      = numeric_parser(), # wants a function
+        metadata            = metadata(),            # wants a dict
+        special_chars       = special_chars(),       # wants a dict
+        numeric_parser      = numeric_parser(),      # wants a function
+        text_filter         = transcription_filter() # wants a function
     )
