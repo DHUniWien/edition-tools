@@ -142,12 +142,6 @@ def manuscripts ():
             'W246.json',
           ]
         },
-        { 'name' : 'W574 old',
-          'files' : [
-            'W574 old 1.json',
-            'W574 old 2.json',
-          ]
-        },
         { 'name' : 'W574',
           'files' : [
             'W574 (W) 1.json',

@@ -5,6 +5,7 @@ import sys
 import pprint
 import argparse
 import json
+import re
 
 from tpen2tei.wordtokenize import from_string
 
@@ -169,8 +170,9 @@ def teixml2collatex (**kwa):
         # presume: one witness per file
         for infile in fnmatch.filter (os.listdir (indir), '*tei.xml'):
 
-            # XXX better get this from the .tei.xml
-            witness_name = infile[:infile.find('.')]
+            # remove file ext. and a possible substring '-merged' (exists
+            # for witnesses that were merged from multiple files into one
+            witness_name = re.sub ('-merged', '', infile[:infile.find('.')])
 
             tokens = extract_tokens (
                 xmlfile   = indir + '/' + infile,

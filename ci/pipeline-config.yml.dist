@@ -17,3 +17,7 @@ version-file: ci/version
 ssh-keys-uri:
 
 relaxng_schema: http://www.tei-c.org/release/xml/tei/custom/schema/relaxng/tei_all.rng
+
+stemmarest-sources-uri:
+stemmarest-sources-branch:
+stemmarest-config-uri:
