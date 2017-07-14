@@ -33,6 +33,12 @@ resources:
         uri: {{ssh-keys-uri}}
         private_key: {{DHUniWienMU-priv-key}}
 
+    - name: netrc-test-api
+      type: git
+      source:
+        uri: {{netrc-test-api-uri}}
+        private_key: {{DHUniWienMU-priv-key}}
+
     - name: stemmarest-sources
       type: git
       source:
@@ -197,6 +203,7 @@ jobs:
                   echo "rearrange data for collatex ..."
                   python3 moe-data/ci/resources/teixml2collatex.py tpen-data/transcription/tei-xml/ collatex
 
+                  # TODO include graphviz in tools image
                   echo "install graphviz (graphviz is not yet part of the tools image) ..."
                   apk add graphviz
 
@@ -211,11 +218,14 @@ jobs:
                           NAME=${NAME%.*}      # strip file ext.
 
                           OUT_FILE_JSON=collatex-out/$NAME.json
+                          OUT_FILE_GRAPHML=collatex-out/$NAME.graphml
                           OUT_FILE_DOT=collatex-out/$NAME.dot
                           SVG_FILE=collatex-out-svg/$NAME.svg
 
                           # json will be bautified later
                           CMD_COLLATE_JSON="java -jar /root/collatex.jar --tokenized --format json $IN_FILE --output $OUT_FILE_JSON"
+
+                          CMD_COLLATE_GRAPHML="java -jar /root/collatex.jar --tokenized --format graphml $IN_FILE --output $OUT_FILE_GRAPHML"
 
                           # dot2svg
                           CMD_COLLATE_DOT="java -jar /root/collatex.jar --tokenized --format dot $IN_FILE --output $OUT_FILE_DOT"
@@ -223,6 +233,9 @@ jobs:
 
                           echo `date -R`: $CMD_COLLATE_JSON
                           $CMD_COLLATE_JSON
+
+                          echo `date -R`: $CMD_COLLATE_GRAPHML
+                          $CMD_COLLATE_GRAPHML
 
                           echo `date -R`: $CMD_COLLATE_DOT
                           $CMD_COLLATE_DOT
@@ -273,18 +286,19 @@ jobs:
                   [ -d tpen-data-bumped/transcription/collatex-out ] || mkdir tpen-data-bumped/transcription/collatex-out/
 
                   cp -r collatex-out/*json tpen-data-bumped/transcription/collatex-out/
+                  cp -r collatex-out/*graphml tpen-data-bumped/transcription/collatex-out/
 
                   git config --global user.email "DHUniWienMU@foo.bar"
                   git config --global user.name "DHUniWienMU"
 
                   cd tpen-data-bumped/transcription/collatex-out/
-                  git add *json
+                  git add *json *graphml
 
                   GIT_STATUS=`git status`
 
                   if echo $GIT_STATUS | grep -q "Changes to be committed:" -;
                   then
-                      git commit -m "add output of collatex" *json
+                      git commit -m "add output of collatex" *json *graphml
                   fi
 
 
@@ -333,6 +347,7 @@ jobs:
             passed: [collate]
           # - get: moe-data
           - get: ssh-keys
+          - get: netrc-test-api
           - get: stemmarest-sources
           - get: stemmarest-config
 
@@ -370,59 +385,68 @@ jobs:
 
 
             inputs:
-              # - name: ssh-keys
-              # - name: stemmarest-config
-              # - name: stemmarest-sources
-              #
               - name: tpen-data
-              # - name: collatex-out-svg
-              # - name: collatex-out-pretty
+              - name: netrc-test-api
 
-            # WARNING
+            #
+            # real string interpolation is possible starting with concourse 3.2.0 only
+            # {{}} puts the inserted string in quotes
+            # starting with 3.2.0 there is the alternative (()) which doesn't
+            # therefore values mentioned in pipeline-config.yml.dist are not yet used here
+            #
             run:
               path: sh
               args:
                 - -exc
                 - |
-                  echo 'hi, task-feed-the-beast here!'
-                  ls tpen-data/transcription/collatex-out
+                  # TODO include curl and jq in tools image
+                  apk add curl jq
 
-                  apk add curl
-
-
-                  # new user
+                  # create new user
                   curl \
-                    --request PUT \
-                    --insecure \
-                    --header "Content-Type: application/json" \
-                    --data '{ "role":"admin", "id":"alpha", "email":"alpha@dh.gesch", "passphrase":"yeah!" }' \
+                      --silent \
+                      --insecure \
+                      --netrc-file netrc-test-api/dot-netrc \
+                      --netrc \
+                      --request PUT \
+                      --header "Content-Type: application/json" \
+                      --data '{ "role":"admin", "id":"alpha", "email":"alpha@dh.gesch", "passphrase":"user-passphrase" }' \
                   https://test.api.stemmaweb.net/moe-data/stemmarest/user/alpha
 
                   # new tradition
                   curl \
-                    --request POST \
-                    --insecure \
-                    --header "Content-Type: application/json" \
-                    --form "file=@tpen-data/transcription/collatex-out/milestone-401.json" \
-                    --form "filetype=json" \
-                    --form "userId=alpha" \
-                  https://test.api.stemmaweb.net/moe-data/stemmarest/tradition
-                  TRADITION =
+                      --silent \
+                      --insecure \
+                      --netrc-file netrc-test-api/dot-netrc \
+                      --netrc \
+                      --request POST \
+                      --form "name=MatthewEdessa" \
+                      --form "language=armenian" \
+                      --form "public=no" \
+                      --form "userId=alpha" \
+                      --form "empty=no" \
+                  https://test.api.stemmaweb.net/moe-data/stemmarest/tradition > create-tradition.response
 
-                  for IN_FILE in tpen-data/transcription/collatex-out/milestone-*.json
+
+                  TRADITION_ID=`jq ".tradId" create-tradition.response | sed s/\"//g`
+                  PREVIOUS_TRADITION_ID=''
+
+                  # add milestones to the new tradition
+                  for IN_FILE in tpen-data/transcription/collatex-out/milestone-*.graphml
                   do
-                      NAME=${IN_FILE##*/}  # strip directory
-                      NAME=${NAME%.*}      # strip file ext.
+                      FILE_NAME=${IN_FILE##*/}  # strip directory
+                      SECTION_NAME=${FILE_NAME%.*}      # strip file ext.
+                      echo "FILE_NAME: " ${FILE_NAME}
+                      echo "SECTION_NAME: " ${SECTION_NAME}
 
-                  #     curl \
-                  #       --request POST \
-                  #       --insecure \
-                  #       --header "Content-Type: application/json" \
-                  #       --form "file=@${IN_FILE}" \
-                  #       --form "filetype=json" \
-                  #       --form "name=${NAME}" \
-                  #     https://test.api.stemmaweb.net/moe-data/stemmarest/tradition/${TRADITION}/section
+                      curl \
+                          --silent \
+                          --insecure \
+                          --netrc-file netrc-test-api/dot-netrc \
+                          --netrc \
+                          --request POST \
+                          --form "name=${SECTION_NAME}" \
+                          --form "file=@${IN_FILE}" \
+                          --form "filetype=collatex" \
+                      https://test.api.stemmaweb.net/moe-data/stemmarest/tradition/${TRADITION_ID}/section
                   done
-
-                  echo "curl --insecure --request GET https://test.api.stemmaweb.net/moe-data/stemmarest/users"
-                  echo "curl --insecure --request GET https://test.api.stemmaweb.net/moe-data/stemmarest/traditions"
