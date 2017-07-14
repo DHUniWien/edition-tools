@@ -436,8 +436,6 @@ jobs:
                   do
                       FILE_NAME=${IN_FILE##*/}  # strip directory
                       SECTION_NAME=${FILE_NAME%.*}      # strip file ext.
-                      echo "FILE_NAME: " ${FILE_NAME}
-                      echo "SECTION_NAME: " ${SECTION_NAME}
 
                       curl \
                           --silent \
