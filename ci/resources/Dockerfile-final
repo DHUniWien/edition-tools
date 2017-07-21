@@ -5,3 +5,10 @@ COPY tools/ /root/
 RUN cd /root/tpen2tei-sources && \
     python3 setup.py install && \
     rm -rf /root/tpen2tei-sources
+
+# timezone Europe/Vienna
+RUN apk update && \
+    apk add tzdata && \
+    cp /usr/share/zoneinfo/Europe/Vienna /etc/localtime && \
+    echo "Europe/Vienna" > /etc/timezone && \
+    apk del tzdata
