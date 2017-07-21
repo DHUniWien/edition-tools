@@ -39,7 +39,7 @@ class TPen (object):
         self.uri_login = cfg.get ('uri_login')
         self.uri_project = cfg.get ('uri_project')
 
-        self._projects_list = None
+        self._projects_list = []
 
         self._global_errors = dict (
             unexpected_content_type = 0,
