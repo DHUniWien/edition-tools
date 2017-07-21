@@ -125,6 +125,8 @@ def log_global_errors (**kwa):
 
 if __name__ == '__main__':
     config = get_config()
+    os.environ.update (dict (GIT_SSH_COMMAND = "ssh -i %s" % config.get ('indentity_file')))
+
     tpen = setup (config)
     backup (tpen = tpen, config = config)
     log_global_errors (ge = tpen.global_errors())
