@@ -39,6 +39,8 @@ class TPen (object):
         self.uri_login = cfg.get ('uri_login')
         self.uri_project = cfg.get ('uri_project')
 
+        self._projects_list = None
+
         self._global_errors = dict (
             unexpected_content_type = 0,
             bad_file                = 0,
@@ -108,27 +110,26 @@ class TPen (object):
             the list consists of dicts with the two keys label and tpen_id
         """
 
-        projects = []
+        if not self._projects_list:
+            soup = BeautifulSoup (self._request (uri = self.uri_index).text, 'html.parser')
+            table = soup.find (id = 'projectList')
 
-        soup = BeautifulSoup (self._request (uri = self.uri_index).text, 'html.parser')
-        table = soup.find (id = 'projectList')
+            # link target may not change
+            # projectID is supposed to be the first parameter
+            #
+            p = re.compile ('^transcription.html\?projectID=(\d+).*')
 
-        # link target may not change
-        # projectID is supposed to be the first parameter
-        #
-        p = re.compile ('^transcription.html\?projectID=(\d+).*')
+            for tr in table.tbody.find_all ('tr'):
+                label = tr.get ('title')
+                href  = tr.td.a.get ('href')
+                match = p.match (href)
 
-        for tr in table.tbody.find_all ('tr'):
-            label = tr.get ('title')
-            href  = tr.td.a.get ('href')
-            match = p.match (href)
+                label and match and self._projects_list.append (dict (
+                    label = tr.get ('title'),
+                    tpen_id = match.group (1),
+                ))
 
-            label and match and projects.append (dict (
-                label = tr.get ('title'),
-                tpen_id = match.group (1),
-            ))
-
-        return projects
+        return self._projects_list
 
 
     def project (self, **kwa):
