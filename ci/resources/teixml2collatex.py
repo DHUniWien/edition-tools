@@ -241,7 +241,6 @@ if __name__ == '__main__':
     parser.add_argument (
         "-v",
         "--verbose",
-        action = "verbose",
         help = "make output more verbose",
     )
 
@@ -253,7 +252,7 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    for c in teixml2collatex (indir = args.indir, verbose = verbose):
+    for c in teixml2collatex (indir = args.indir, verbose = args.verbose):
         if c.get ('witnesses'):
             outfile = '%s/milestone-%s.json' % (args.outdir, c.get ('milestone'))
 
