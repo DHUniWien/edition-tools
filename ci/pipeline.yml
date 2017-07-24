@@ -95,7 +95,7 @@ jobs:
 
                   ### use merged files
                   [ -d transcription/merged ] || mkdir transcription/merged/
-                  python3 ../moe-data/ci/resources/merge-json.py transcription/ transcription/merged
+                  python3 ../moe-data/ci/resources/merge-json.py --verbose transcription/ transcription/merged
 
                   ### create TEI-XML
                   [ -d transcription/tei-xml ] || mkdir transcription/tei-xml/
@@ -105,8 +105,8 @@ jobs:
                   # [ -d transcription/tei-xml ] || mkdir transcription/tei-xml/
                   # python3 ../moe-data/ci/resources/json2xml.py transcription/ transcription/tei-xml/
 
-                  git config --global user.email "DHUniWienMU@foo.bar"
-                  git config --global user.name "DHUniWienMU"
+                  git config --global user.email "ci@dh.gesch.univie.ac.at"
+                  git config --global user.name "moe-data/tpen2tei"
 
                   cd transcription/tei-xml/
                   git add *xml
@@ -157,6 +157,7 @@ jobs:
                           # xmlwf "$FILE" && \
                           xmllint --noout --relaxng "{{relaxng_schema}}" "$FILE"
                       done
+                      exit 0
                   '
 
                   IFS=$SAVEIFS
@@ -201,7 +202,7 @@ jobs:
                 - -exc
                 - |
                   echo "rearrange data for collatex ..."
-                  python3 moe-data/ci/resources/teixml2collatex.py tpen-data/transcription/tei-xml/ collatex
+                  python3 moe-data/ci/resources/teixml2collatex.py --verbose tpen-data/transcription/tei-xml/ collatex
 
                   # TODO include graphviz in tools image
                   echo "install graphviz (graphviz is not yet part of the tools image) ..."
@@ -243,9 +244,9 @@ jobs:
                           echo `date -R`: $CMD_SVG
                           $CMD_SVG
                       done
-
-                      echo `date -R` done
                   '
+
+                  echo `date -R` done
 
                   echo "pretty print collatex's output ..."
                   python3 moe-data/ci/resources/beautify-json.py collatex-out/ collatex-out-pretty/
@@ -253,7 +254,6 @@ jobs:
                   echo `date -R` done
 
                   IFS=$SAVEIFS
-                  exit 0
 
         - task: task-collatex-to-github
 
@@ -288,8 +288,8 @@ jobs:
                   cp -r collatex-out/*json tpen-data-bumped/transcription/collatex-out/
                   cp -r collatex-out/*graphml tpen-data-bumped/transcription/collatex-out/
 
-                  git config --global user.email "DHUniWienMU@foo.bar"
-                  git config --global user.name "DHUniWienMU"
+                  git config --global user.email "ci@dh.gesch.univie.ac.at"
+                  git config --global user.name "moe-data/collate"
 
                   cd tpen-data-bumped/transcription/collatex-out/
                   git add *json *graphml

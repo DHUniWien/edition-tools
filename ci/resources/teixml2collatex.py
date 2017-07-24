@@ -156,6 +156,7 @@ def milestones ():
 
 def teixml2collatex (**kwa):
     indir = kwa.get ('indir')
+    verbose = kwa.get ('verbose')
 
     # list elements are already so
     # that collatex can digest them
@@ -169,6 +170,8 @@ def teixml2collatex (**kwa):
         #
         # presume: one witness per file
         for infile in fnmatch.filter (os.listdir (indir), '*tei.xml'):
+            if verbose:
+                print ("<{}> in file: <{}>".format (milestone, infile))
 
             # remove file ext. and a possible substring '-merged' (exists
             # for witnesses that were merged from multiple files into one
@@ -235,6 +238,12 @@ if __name__ == '__main__':
         "outdir",
         help = "output directory",
     )
+    parser.add_argument (
+        "-v",
+        "--verbose",
+        action = "verbose",
+        help = "make output more verbose",
+    )
 
     logging.basicConfig (
         format = '%(asctime)s %(message)s',
@@ -244,7 +253,7 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    for c in teixml2collatex (indir = args.indir):
+    for c in teixml2collatex (indir = args.indir, verbose = verbose):
         if c.get ('witnesses'):
             outfile = '%s/milestone-%s.json' % (args.outdir, c.get ('milestone'))
 

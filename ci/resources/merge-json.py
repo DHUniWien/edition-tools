@@ -153,6 +153,8 @@ def manuscripts ():
 
 def main (args):
     for (name, files) in [(m['name'], m['files']) for m in manuscripts()]:
+        if args.verbose:
+            print ("merging {}".format (name))
 
         files = list (files)
 
@@ -196,6 +198,12 @@ if __name__ == "__main__":
         "--write_stdout_stderr",
         action = "store_true",
         help = "write stdout and stderr to separate files in outdir",
+    )
+    parser.add_argument (
+        "-v",
+        "--verbose",
+        action = "verbose",
+        help = "make output more verbose",
     )
 
     args = parser.parse_args()
