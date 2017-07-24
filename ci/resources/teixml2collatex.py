@@ -171,7 +171,7 @@ def teixml2collatex (**kwa):
         # presume: one witness per file
         for infile in fnmatch.filter (os.listdir (indir), '*tei.xml'):
             if verbose:
-                print ("<{}> in file: <{}>".format (milestone, infile))
+                print ("milestone {} in file: {}".format (milestone, infile))
 
             # remove file ext. and a possible substring '-merged' (exists
             # for witnesses that were merged from multiple files into one
