@@ -95,7 +95,7 @@ jobs:
 
                   ### use merged files
                   [ -d transcription/merged ] || mkdir transcription/merged/
-                  python3 ../moe-data/ci/resources/merge-json.py --verbose transcription/ transcription/merged
+                  python3 ../moe-data/ci/resources/merge-json.py transcription/ transcription/merged --verbose
 
                   ### create TEI-XML
                   [ -d transcription/tei-xml ] || mkdir transcription/tei-xml/
@@ -202,7 +202,7 @@ jobs:
                 - -exc
                 - |
                   echo "rearrange data for collatex ..."
-                  python3 moe-data/ci/resources/teixml2collatex.py --verbose tpen-data/transcription/tei-xml/ collatex
+                  python3 moe-data/ci/resources/teixml2collatex.py tpen-data/transcription/tei-xml/ collatex --verbose
 
                   # TODO include graphviz in tools image
                   echo "install graphviz (graphviz is not yet part of the tools image) ..."

@@ -196,11 +196,13 @@ if __name__ == "__main__":
     parser.add_argument (
         "-w",
         "--write_stdout_stderr",
+        action = "store_true",
         help = "write stdout and stderr to separate files in outdir",
     )
     parser.add_argument (
         "-v",
         "--verbose",
+        action = "store_true",
         help = "make output more verbose",
     )
 

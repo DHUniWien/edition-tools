@@ -241,6 +241,7 @@ if __name__ == '__main__':
     parser.add_argument (
         "-v",
         "--verbose",
+        action = "store_true",
         help = "make output more verbose",
     )
 
