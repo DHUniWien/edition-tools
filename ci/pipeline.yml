@@ -2,12 +2,21 @@
 resources:
     # already fetched into git by cronjob at storage
     #
-    - name: tpen-data
+    - name: tpen-data-write
       type: git
       source:
         uri: {{tpen-data-uri}}
         branch: {{tpen-data-branch}}
         paths: [transcription]
+        private_key: {{DHUniWienMU-priv-key}}
+
+    - name: tpen-data-read
+      type: git
+      source:
+        uri: {{tpen-data-uri}}
+        branch: {{tpen-data-branch}}
+        paths: [transcription]
+        ignore_paths: [transcription/tei-xml, transcription/collatex-out]
         private_key: {{DHUniWienMU-priv-key}}
 
     - name: moe-data
@@ -58,12 +67,13 @@ jobs:
     - name: tpen2tei
       plan:
         - aggregate:
-          - get: tpen-data
+          - get: tpen-data-read
             trigger: true
           - get: ssh-keys
           - get: moe-data
 
         - task: task-tpen2tei
+          input_mapping: { tpen-data-read: tpen-data }
 
           config:
             platform: linux
@@ -118,16 +128,17 @@ jobs:
                       git commit -m "tpen2tei" *xml
                   fi
 
-        - put: tpen-data
+        - put: tpen-data-write
           params: {repository: tpen-data-bumped}
 
     - name: validate-tei-xml
       plan:
-        - get: tpen-data
+        - get: tpen-data-read
           trigger: true
           passed: [tpen2tei]
 
         - task: task-validate-tei-xml
+          input_mapping: { tpen-data-read: tpen-data }
 
           config:
             platform: linux
@@ -166,7 +177,7 @@ jobs:
     - name: collate
       plan:
         - aggregate:
-          - get: tpen-data
+          - get: tpen-data-read
             trigger: true
             passed: [validate-tei-xml]
           - get: moe-data
@@ -176,6 +187,7 @@ jobs:
           - get: stemmarest-config
 
         - task: task-collate
+          input_mapping: { tpen-data-read: tpen-data }
 
           config:
             platform: linux
@@ -256,6 +268,7 @@ jobs:
                   IFS=$SAVEIFS
 
         - task: task-collatex-to-github
+          input_mapping: { tpen-data-read: tpen-data }
 
           config:
             platform: linux
@@ -276,7 +289,7 @@ jobs:
               args:
                 - -exc
                 - |
-                  echo "push output of collatex (json) to github ..."
+                  echo "push output of collatex (json and graphml) to github ..."
 
                   SSH_KEYS_DIR=ssh-keys
                   /bin/chmod 600 ${SSH_KEYS_DIR}/github/DHUniWienMU-id_rsa
@@ -302,7 +315,7 @@ jobs:
                   fi
 
 
-        - put: tpen-data
+        - put: tpen-data-write
           params: {repository: tpen-data-bumped}
 
 
@@ -342,7 +355,7 @@ jobs:
     - name: stemmarest
       plan:
         - aggregate:
-          - get: tpen-data
+          - get: tpen-data-read
             trigger: true
             passed: [collate]
           # - get: moe-data
@@ -352,6 +365,7 @@ jobs:
           - get: stemmarest-config
 
         - task: task-create-stemmarest-test
+          input_mapping: { tpen-data-read: tpen-data }
 
           config:
             platform: linux
@@ -374,6 +388,7 @@ jobs:
 
 
         - task: task-feed-the-beast
+          input_mapping: { tpen-data-read: tpen-data }
 
           config:
             platform: linux
