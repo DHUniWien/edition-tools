@@ -358,9 +358,7 @@ jobs:
           - get: tpen-data-read
             trigger: true
             passed: [collate]
-          # - get: moe-data
           - get: ssh-keys
-          - get: netrc-test-api
           - get: stemmarest-sources
           - get: stemmarest-config
 
