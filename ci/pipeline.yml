@@ -73,7 +73,7 @@ jobs:
           - get: moe-data
 
         - task: task-tpen2tei
-          input_mapping: { tpen-data-read: tpen-data }
+          input_mapping: { tpen-data: tpen-data-read }
 
           config:
             platform: linux
@@ -138,7 +138,7 @@ jobs:
           passed: [tpen2tei]
 
         - task: task-validate-tei-xml
-          input_mapping: { tpen-data-read: tpen-data }
+          input_mapping: { tpen-data: tpen-data-read }
 
           config:
             platform: linux
@@ -187,7 +187,7 @@ jobs:
           - get: stemmarest-config
 
         - task: task-collate
-          input_mapping: { tpen-data-read: tpen-data }
+          input_mapping: { tpen-data: tpen-data-read }
 
           config:
             platform: linux
@@ -268,7 +268,7 @@ jobs:
                   IFS=$SAVEIFS
 
         - task: task-collatex-to-github
-          input_mapping: { tpen-data-read: tpen-data }
+          input_mapping: { tpen-data: tpen-data-read }
 
           config:
             platform: linux
@@ -352,7 +352,7 @@ jobs:
                   echo "SVG files copied to webspace, visit https://www.ci.stemmaweb.net/moe-data/"
 
 
-    - name: stemmarest
+    - name: create-stemmarest-instance
       plan:
         - aggregate:
           - get: tpen-data-read
@@ -364,8 +364,8 @@ jobs:
           - get: stemmarest-sources
           - get: stemmarest-config
 
-        - task: task-create-stemmarest-test
-          input_mapping: { tpen-data-read: tpen-data }
+        - task: task-create-stemmarest-instance
+          input_mapping: { tpen-data: tpen-data-read }
 
           config:
             platform: linux
@@ -387,8 +387,16 @@ jobs:
                 - "stemmarest-config/deploy-moe-data.sh"
 
 
+    - name: feed-the-beast
+      plan:
+        - aggregate:
+          - get: tpen-data-read
+            trigger: true
+            passed: [create-stemmarest-instance]
+          - get: netrc-test-api
+
         - task: task-feed-the-beast
-          input_mapping: { tpen-data-read: tpen-data }
+          input_mapping: { tpen-data: tpen-data-read }
 
           config:
             platform: linux
@@ -444,13 +452,17 @@ jobs:
 
 
                   TRADITION_ID=`jq ".tradId" create-tradition.response | sed s/\"//g`
-                  PREVIOUS_TRADITION_ID=''
 
-                  # add milestones to the new tradition
+                  SECTION_ID=''
+
+                  # add milestones (sections) to the new tradition
                   for IN_FILE in tpen-data/transcription/collatex-out/milestone-*.graphml
                   do
                       FILE_NAME=${IN_FILE##*/}  # strip directory
                       SECTION_NAME=${FILE_NAME%.*}      # strip file ext.
+
+                      SECTION_ID_PREV=${SECTION_ID}
+                      SECTION_ID=''
 
                       curl \
                           --silent \
@@ -461,5 +473,19 @@ jobs:
                           --form "name=${SECTION_NAME}" \
                           --form "file=@${IN_FILE}" \
                           --form "filetype=collatex" \
-                      https://test.api.stemmaweb.net/moe-data/stemmarest/tradition/${TRADITION_ID}/section
+                      https://test.api.stemmaweb.net/moe-data/stemmarest/tradition/${TRADITION_ID}/section > create-section.response
+                      cat create-section.response
+
+                      SECTION_ID=`jq ".parentId" create-section.response | sed s/\"//g`
+
+                      # order new milestone (section) right after previous one
+                      if [ -n ${SECTION_ID_PREV} ]; then
+                          curl \
+                              --silent \
+                              --insecure \
+                              --netrc-file netrc-test-api/dot-netrc \
+                              --netrc \
+                              --request PUT \
+                          https://test.api.stemmaweb.net/moe-data/stemmarest/tradition/${TRADITION_ID}/section/${SECTION_ID}/orderAfter/${SECTION_ID_PREV}
+                      fi
                   done
