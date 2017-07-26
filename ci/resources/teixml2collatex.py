@@ -154,6 +154,13 @@ def milestones ():
     )
 
 
+def normalise_armenian(token):
+    if token['n'] == token['t']:
+        str = token['n'].lower().replace('եւ', 'և').replace('աւ', 'օ')
+        str = re.sub(r'[\W]', '', str)
+        token['n'] = str
+
+
 def teixml2collatex (**kwa):
     indir = kwa.get ('indir')
     verbose = kwa.get ('verbose')
@@ -218,6 +225,7 @@ def extract_tokens (**kwa):
                 fh.read(),
                 milestone    = milestone,
                 first_layer  = False,
+                normalisation = normalise_armenian
             )
     except FileNotFoundError:
         logging.info ('file not found: %s' % xmlfile)
