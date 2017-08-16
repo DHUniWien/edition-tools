@@ -13,7 +13,7 @@ RUN apk update \
     openssh \
     libxml2-utils \
     curl \
-    jp \
+    jq \
     graphviz \
     tzdata
 
