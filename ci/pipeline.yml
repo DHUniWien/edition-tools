@@ -48,18 +48,16 @@ resources:
         uri: {{netrc-test-api-uri}}
         private_key: {{DHUniWienMU-priv-key}}
 
-    - name: stemmarest-sources
-      type: git
-      source:
-        uri: {{stemmarest-sources-uri}}
-        branch: {{stemmarest-sources-branch}}
-        paths: [stemmarest, ci/resources]
-
     - name: stemmarest-config
       type: git
       source:
         uri: {{stemmarest-config-uri}}
         private_key: {{DHUniWienMU-priv-key}}
+
+    - name: ci
+      type: git
+      source:
+        uri: {{ci-uri}}
 
 
 jobs:
@@ -182,9 +180,6 @@ jobs:
             passed: [validate-tei-xml]
           - get: moe-data
           - get: ssh-keys
-
-          - get: stemmarest-sources
-          - get: stemmarest-config
 
         - task: task-collate
           input_mapping: { tpen-data: tpen-data-read }
@@ -355,8 +350,8 @@ jobs:
             trigger: true
             passed: [collate]
           - get: ssh-keys
-          - get: stemmarest-sources
           - get: stemmarest-config
+          - get: ci
 
         - task: task-create-stemmarest-instance
           input_mapping: { tpen-data: tpen-data-read }
@@ -372,7 +367,7 @@ jobs:
             inputs:
               - name: ssh-keys
               - name: stemmarest-config
-              - name: stemmarest-sources
+              - name: ci
 
             run:
               path: sh
