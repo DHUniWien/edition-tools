@@ -26,6 +26,13 @@ resources:
         branch: {{moe-data-branch}}
         paths: [ci/resources]
 
+    - name: moe-config
+      type: git
+      source:
+        uri: {{moe-config-uri}}
+        private_key: {{DHUniWienMU-priv-key}}
+
+
     #- name: version
     #  type: semver
     #  source:
@@ -46,12 +53,6 @@ resources:
       type: git
       source:
         uri: {{netrc-test-api-uri}}
-        private_key: {{DHUniWienMU-priv-key}}
-
-    - name: stemmarest-config
-      type: git
-      source:
-        uri: {{stemmarest-config-uri}}
         private_key: {{DHUniWienMU-priv-key}}
 
     - name: ci
@@ -350,8 +351,8 @@ jobs:
             trigger: true
             passed: [collate]
           - get: ssh-keys
-          - get: stemmarest-config
           - get: ci
+          - get: moe-config
 
         - task: task-create-stemmarest-instance
           input_mapping: { tpen-data: tpen-data-read }
@@ -366,14 +367,47 @@ jobs:
 
             inputs:
               - name: ssh-keys
-              - name: stemmarest-config
               - name: ci
+              - name: moe-config
 
             run:
               path: sh
               args:
                 - "ci/bin/deploy.sh"
-                - "stemmarest-config/deploy-moe-data.sh"
+                - "moe-config/deploy-test.conf"
+
+
+    - name: create-stemmarest-instance-small
+      plan:
+        - aggregate:
+          - get: tpen-data-read
+            trigger: true
+            passed: [collate]
+          - get: ssh-keys
+          - get: ci
+          - get: moe-config
+
+        - task: task-create-stemmarest-instance-small
+          input_mapping: { tpen-data: tpen-data-read }
+
+          config:
+            platform: linux
+            image_resource:
+              type: docker-image
+              source:
+                repository: {{tools-image}}
+                insecure_registries: [ {{insecure-registries}} ]
+
+            inputs:
+              - name: ssh-keys
+              - name: ci
+              - name: moe-config
+
+            run:
+              path: sh
+              args:
+                - "ci/bin/deploy.sh"
+                - "moe-config/deploy-test-small.conf"
 
 
     - name: feed-the-beast
@@ -464,14 +498,118 @@ jobs:
 
                       SECTION_ID=`jq ".parentId" create-section.response | sed s/\"//g`
 
-                      # order new milestone (section) right after previous one
-                      if [ -n ${SECTION_ID_PREV} ]; then
-                          curl \
-                              --silent \
-                              --insecure \
-                              --netrc-file netrc-test-api/dot-netrc \
-                              --netrc \
-                              --request PUT \
-                          https://test.api.stemmaweb.net/moe-data/stemmarest/tradition/${TRADITION_ID}/section/${SECTION_ID}/orderAfter/${SECTION_ID_PREV}
-                      fi
+                  ### they are already in order
+                  #
+                  #     # order new milestone (section) right after previous one
+                  #     if [ -n ${SECTION_ID_PREV} ]; then
+                  #         curl \
+                  #             --silent \
+                  #             --insecure \
+                  #             --netrc-file netrc-test-api/dot-netrc \
+                  #             --netrc \
+                  #             --request PUT \
+                  #         https://test.api.stemmaweb.net/moe-data/stemmarest/tradition/${TRADITION_ID}/section/${SECTION_ID}/orderAfter/${SECTION_ID_PREV}
+                  #     fi
+                  done
+
+    - name: feed-the-beast-small
+      plan:
+        - aggregate:
+          - get: tpen-data-read
+            trigger: true
+            passed: [create-stemmarest-instance]
+          - get: netrc-test-api
+
+        - task: task-feed-the-beast-small
+          input_mapping: { tpen-data: tpen-data-read }
+
+          config:
+            platform: linux
+            image_resource:
+              type: docker-image
+              source:
+                repository: {{tools-image}}
+                insecure_registries: [ {{insecure-registries}} ]
+
+
+            inputs:
+              - name: tpen-data
+              - name: netrc-test-api
+
+            #
+            # real string interpolation is possible starting with concourse 3.2.0 only
+            # {{}} puts the inserted string in quotes
+            # starting with 3.2.0 there is the alternative (()) which doesn't
+            # therefore values mentioned in pipeline-config.yml.dist are not yet used here
+            #
+            run:
+              path: sh
+              args:
+                - -exc
+                - |
+                  # create new user
+                  curl \
+                      --silent \
+                      --insecure \
+                      --netrc-file netrc-test-api/dot-netrc \
+                      --netrc \
+                      --request PUT \
+                      --header "Content-Type: application/json" \
+                      --data '{ "role":"admin", "id":"alpha", "email":"alpha@dh.gesch", "passphrase":"user-passphrase" }' \
+                  https://test.api.stemmaweb.net/small-moe-data/stemmarest/user/alpha
+
+                  # new tradition
+                  curl \
+                      --silent \
+                      --insecure \
+                      --netrc-file netrc-test-api/dot-netrc \
+                      --netrc \
+                      --request POST \
+                      --form "name=MatthewEdessa" \
+                      --form "language=armenian" \
+                      --form "public=no" \
+                      --form "userId=alpha" \
+                      --form "empty=no" \
+                  https://test.api.stemmaweb.net/small-moe-data/stemmarest/tradition > create-tradition.response
+
+
+                  TRADITION_ID=`jq ".tradId" create-tradition.response | sed s/\"//g`
+
+                  SECTION_ID=''
+
+                  # add milestones (sections) to the new tradition
+                  for IN_FILE in tpen-data/transcription/collatex-out/milestone-4*.graphml
+                  do
+                      FILE_NAME=${IN_FILE##*/}  # strip directory
+                      SECTION_NAME=${FILE_NAME%.*}      # strip file ext.
+
+                      SECTION_ID_PREV=${SECTION_ID}
+                      SECTION_ID=''
+
+                      curl \
+                          --silent \
+                          --insecure \
+                          --netrc-file netrc-test-api/dot-netrc \
+                          --netrc \
+                          --request POST \
+                          --form "name=${SECTION_NAME}" \
+                          --form "file=@${IN_FILE}" \
+                          --form "filetype=collatex" \
+                      https://test.api.stemmaweb.net/small-moe-data/stemmarest/tradition/${TRADITION_ID}/section > create-section.response
+                      cat create-section.response
+
+                      SECTION_ID=`jq ".parentId" create-section.response | sed s/\"//g`
+
+                  ### they are already in order
+                  #
+                  #     # order new milestone (section) right after previous one
+                  #     if [ -n ${SECTION_ID_PREV} ]; then
+                  #         curl \
+                  #             --silent \
+                  #             --insecure \
+                  #             --netrc-file netrc-test-api/dot-netrc \
+                  #             --netrc \
+                  #             --request PUT \
+                  #         https://test.api.stemmaweb.net/small-moe-data/stemmarest/tradition/${TRADITION_ID}/section/${SECTION_ID}/orderAfter/${SECTION_ID_PREV}
+                  #     fi
                   done
