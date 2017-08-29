@@ -46,7 +46,7 @@ def manuscripts ():
             'M1768 (H) 3.json',
           ]
         },
-        { 'name' : 'M1768',
+        { 'name' : 'M1769',
           'files' : [
             'M1769 (I) 1.json',
             'M1769 (I) 2.json',
@@ -68,7 +68,7 @@ def manuscripts ():
           ]
         },
 
-        { 'name' : 'M3017',
+        { 'name' : 'M3071',
           'files' : [
             'M3071 (C).json',
           ]
