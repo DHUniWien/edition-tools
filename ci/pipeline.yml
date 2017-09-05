@@ -374,7 +374,7 @@ jobs:
               path: sh
               args:
                 - "ci/bin/deploy.sh"
-                - "moe-config/deploy-test.conf"
+                - "moe-config/deploy-moe-data-test.conf"
 
 
     - name: create-stemmarest-instance-small
@@ -407,7 +407,7 @@ jobs:
               path: sh
               args:
                 - "ci/bin/deploy.sh"
-                - "moe-config/deploy-test-small.conf"
+                - "moe-config/deploy-moe-data-test-small.conf"
 
 
     - name: feed-the-beast
