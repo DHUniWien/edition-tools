@@ -157,57 +157,47 @@ def milestones ():
 def normalise_armenian(token):
     if token['n'] == token['t']:
         str = token['n'].lower().replace('եւ', 'և').replace('աւ', 'օ')
-        str = re.sub(r'[\W]', '', str)
+        if re.search(r'\w', str) is not None:
+            str = re.sub(r'[\W]', '', str)
         token['n'] = str
 
 
-def teixml2collatex (**kwa):
-    indir = kwa.get ('indir')
-    verbose = kwa.get ('verbose')
-
+def teixml2collatex(milestone, indir, verbose):
     # list elements are already so
     # that collatex can digest them
-    collation = list()
+    collation = dict (witnesses = list())
 
-    for milestone in milestones():
-        ws = dict (witnesses = list())
+    # walk through all available witnesses
+    # and look for the current milestone
+    #
+    # presume: one witness per file
+    for infile in fnmatch.filter (os.listdir (indir), '*tei.xml'):
+        if verbose:
+            print ("milestone {} in file: {}".format (milestone, infile))
 
-        # walk through all available witnesses
-        # and look for the current milestone
-        #
-        # presume: one witness per file
-        for infile in fnmatch.filter (os.listdir (indir), '*tei.xml'):
-            if verbose:
-                print ("milestone {} in file: {}".format (milestone, infile))
+        # remove file ext. and a possible substring '-merged' (exists
+        # for witnesses that were merged from multiple files into one
+        witness_name = re.sub ('-merged', '', infile[:infile.find('.')])
 
-            # remove file ext. and a possible substring '-merged' (exists
-            # for witnesses that were merged from multiple files into one
-            witness_name = re.sub ('-merged', '', infile[:infile.find('.')])
-
-            tokens = extract_tokens (
-                xmlfile   = indir + '/' + infile,
-                milestone = milestone,
-            )
-
-            if tokens:
-                ws.get ('witnesses').append (dict (
-                    id     = witness_name,
-                    tokens = tokens,
-                ))
-                logging.info ('milestone <%s> found in witness file <%s>' % (
-                    milestone,
-                    infile,
-                ))
-            else:
-                logging.info ('milestone <%s> not found in witness file <%s>' % (
-                    milestone,
-                    infile,
-                ))
-
-        collation.append (dict (
+        tokens = extract_tokens (
+            xmlfile   = indir + '/' + infile,
             milestone = milestone,
-            witnesses = ws,
-        ))
+        )
+
+        if tokens:
+            collation.get ('witnesses').append (dict (
+                id     = witness_name,
+                tokens = tokens,
+            ))
+            logging.info ('milestone <%s> found in witness file <%s>' % (
+                milestone,
+                infile,
+            ))
+        else:
+            logging.info ('milestone <%s> not found in witness file <%s>' % (
+                milestone,
+                infile,
+            ))
 
     return collation
 
@@ -260,14 +250,15 @@ if __name__ == '__main__':
     )
 
     args = parser.parse_args()
-
-    for c in teixml2collatex (indir = args.indir, verbose = args.verbose):
+    
+    for milestone in milestones():
+        c = teixml2collatex(milestone, args.indir, args.verbose)
         if c.get ('witnesses'):
-            outfile = '%s/milestone-%s.json' % (args.outdir, c.get ('milestone'))
+            outfile = '%s/milestone-%s.json' % (args.outdir, milestone)
 
             with open (outfile, 'w') as fh:
                 json.dump (
-                    c.get ('witnesses'),
+                    c,
                     fh,
                     ensure_ascii = False,
                     indent = 4,
