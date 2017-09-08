@@ -17,12 +17,24 @@ RUN apk update \
     graphviz \
     tzdata \
     # BEGIN Text::Tradition
-    perl \
     make \
     gcc \
     wget \
+    perl \
+    perl-xml-libxml \
     perl-dev \
-    libc-dev
+    libc-dev \
+    perl-text-csv \
+    perl-spreadsheet-parseexcel \
+    perl-ipc-run \
+    perl-moose \
+    perl-test-warn \
+    perl-data-dump \
+    perl-algorithm-diff \
+    perl-graph \
+    perl-file-which \
+    perl-devel-stacktrace \
+    perl-json
     # END Text::Tradition
 
 RUN wget https://cpanmin.us -O cpanm && \
