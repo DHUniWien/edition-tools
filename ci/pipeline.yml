@@ -26,6 +26,12 @@ resources:
         repository: {{tools-final-image}}
         insecure_registries: [ {{insecure-registries}} ]
 
+    - name: tools-final-base-image
+      type: docker-image
+      source:
+        repository: {{tools-final-base-image}}
+        insecure_registries: [ {{insecure-registries}} ]
+
     - name: collatex-sources
       type: git
       source:
@@ -148,10 +154,6 @@ jobs:
 
     - name: build-image
       plan:
-        - put: version
-          params:
-            bump: patch
-
         - aggregate:
 
           - get: tpen2tei-sources
@@ -169,6 +171,9 @@ jobs:
             trigger: true
 
           - get: maven-config
+
+          - get: tools-final-base-image
+            trigger: true
 
         - task: task-package-collatex
 
@@ -229,6 +234,10 @@ jobs:
                   cp tools-sources/ci/resources/Dockerfile-final artifacts/Dockerfile
                   cp tools-config-sources/tpen/backup.yml artifacts/tools/tpen/
                   cp collatex/collatex.jar artifacts/tools/collatex.jar
+
+        - put: version
+          params:
+            bump: patch
 
         - put: tools-final-image
           params:
