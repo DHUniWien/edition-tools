@@ -18,8 +18,8 @@ def manuscripts ():
         { 'name' : 'Bz449',
           'files' : ['Bz449 (K) .json'],
         },
-        { 'name' : 'Bzommar, Armenian Catholic Clergy Institute 430',
-          'files' : ['Bzommar, Armenian Catholic Clergy Institute 430.json'],
+        { 'name' : 'Bz430',
+          'files' : ['Bz430.json'],
         },
         { 'name' : 'M1731',
           'files' : [
