@@ -38,7 +38,7 @@ RUN apk update \
     # END Text::Tradition
 
 RUN wget https://cpanmin.us -O cpanm && \
-    perl cpanm Text::Tradition
+    perl cpanm List::Util Devel::OverloadInfo Text::Tradition
 
 # timezone Europe/Vienna
 RUN cp /usr/share/zoneinfo/Europe/Vienna /etc/localtime && \
