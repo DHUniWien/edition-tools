@@ -5,81 +5,45 @@ Wrapper for tpen2tei.json2xml
 """
 
 import argparse
-
+import importlib
+import os
+import sys
 import tpen2tei.json2xml
 
 
-def metadata():
+def metadata(configmod):
     """Return a dictionary suitable for the 'metadata' parameter to from_sc."""
-    return {
-        'title': 'Ժամանակագրութիւն',
-        'author': 'Մատթէոս Ուռհայեցի',
-        'short_error': True
-    }
+    if configmod is not None:
+        config = importlib.import_module(configmod)
+        md = getattr(config, "metadata", None)
+        return md
+    return None
 
-def special_chars():
-    """Return a dictionary suitable for the 'special_chars parameter to from_sc."""
-    return {
-        'աշխարհ': ('asxarh', 'ARMENIAN ASHXARH SYMBOL'),
-        'ամենայն': ('amenayn', 'ARMENIAN AMENAYN SYMBOL'),
-        'արեգակն': ('aregakn', 'ARMENIAN AREGAKN SYMBOL'),
-        'լուսին': ('lusin', 'ARMENIAN LUSIN SYMBOL'),
-        'որպէս': ('orpes', 'ARMENIAN ORPES SYMBOL'),
-        'երկիր': ('erkir', 'ARMENIAN ERKIR SYMBOL'),
-        'երկին': ('erkin', 'ARMENIAN ERKIN SYMBOL'),
-        'ընդ': ('und', 'ARMENIAN END SYMBOL'),
-        'ըստ': ('ust', 'ARMENIAN EST SYMBOL'),
-        'պտ': ('ptlig', 'ARMENIAN PEH-TIWN LIGATURE'),
-        'թբ': ('tblig', 'ARMENIAN TO-BEN LIGATURE'),
-        'թե': ('techlig', 'ARMENIAN TO-ECH LIGATURE'),
-        'թի': ('tinilig', 'ARMENIAN TO-INI LIGATURE'),
-        'թէ': ('tehlig', 'ARMENIAN TO-EH LIGATURE'),
-        'էս': ('eslig', 'ARMENIAN EH-SEH LIGATURE'),
-        'ես': ('echslig', 'ARMENIAN ECH-SEH LIGATURE'),
-        'յր': ('yrlig', 'ARMENIAN YI-REH LIGATURE'),
-        'րզ': ('rzlig', 'ARMENIAN REH-ZA LIGATURE'),
-        'զմ': ('zmlig', 'ARMENIAN ZA-MEN LIGATURE'),
-        'թգ': ('tglig', 'ARMENIAN TO-GIM LIGATURE'),
-        'ա': ('avar', 'ARMENIAN AYB VARIANT'),
-        'հ': ('hvar', 'ARMENIAN HO VARIANT'),
-        'յ': ('yabove', 'ARMENIAN YI SUPERSCRIPT VARIANT')
-    }
+def special_chars(configmod):
+    """Return a dict of non-Unicode glyphs that may occur in the manuscript"""
+    if configmod is not None:
+        config = importlib.import_module(configmod)
+        sc = getattr(config, "special_chars", None)
+        return sc
+    return None
 
-def numeric_parser():
-    """Given the text content of a <num> element, try to turn it into a number."""
 
-    def func (val):
-        # Create the stack of characters
-        sigfigs = [ord(c) for c in val.replace('և', '').upper() if ord(c) > 1328 and ord(c) < 1365]
-        total = 0
-        last = None
-        for ch in sigfigs:
-            # What is this one's numeric value?
-            if ch < 1338:    # Ա-Թ
-                chval = ch - 1328
-            elif ch < 1347:  # Ժ-Ղ
-                chval = (ch - 1337) * 10
-            elif ch < 1356:  # Ճ-Ջ
-                chval = (ch - 1346) * 100
-            else:            # Ռ-Ք
-                chval = (ch - 1355) * 1000
+def numeric_parser(configmod):
+    """Return a function that parses the content of <num> tags into a numeric value"""
+    if configmod is not None:
+        config = importlib.import_module(configmod)
+        np = getattr(config, "numeric_parser", None)
+        return np
+    return None
 
-            # Put it in the total
-            if last is None or chval < last:
-                total += chval
-            else:
-                total *= chval
-            last = chval
-        return total
-
-    return func
     
-def transcription_filter():
-    return lambda x: x.replace(
-    '_', '֊').replace(    # fix erroneous underscore use by Razmik
-    '“', '"').replace(    # fix curly quote pasting by Anahit
-    '”', '"').replace(
-    ',', '.')             # MSS have no difference between comma & dot
+def transcription_filter(configmod):
+    """Return a function that filters a line of transcription before XMLification"""
+    if configmod is not None:
+        config = importlib.import_module(configmod)
+        tf = getattr(config, "transcription_filter", None)
+        return tf
+    return None
     
 
 if __name__ == '__main__':
@@ -99,6 +63,11 @@ if __name__ == '__main__':
         action = "store_true",
         help = "write stdout and stderr to separate files in outdir",
     )
+    parser.add_argument (
+        "-c",
+        "--config",
+        help = "a Python module with any necessary custom definitions",
+    )
 
     args = parser.parse_args()
 
@@ -106,13 +75,18 @@ if __name__ == '__main__':
     #      format = '%(asctime)s %(message)s',
     #      filename = '%s.log' % os.path.basename (sys.argv[0]),
     #  )
+    configmod = None
+    if args.config is not None:
+        configpath = os.path.expanduser(args.config)
+        sys.path.append(os.path.dirname(configpath))
+        configmod = os.path.basename(configpath)
 
     tpen2tei.json2xml.json2xml (
         indir               = args.indir,
         outdir              = args.outdir,
         write_stdout_stderr = args.write_stdout_stderr,
-        metadata            = metadata(),            # wants a dict
-        special_chars       = special_chars(),       # wants a dict
-        numeric_parser      = numeric_parser(),      # wants a function
-        text_filter         = transcription_filter() # wants a function
+        metadata            = metadata(configmod),            # wants a dict or None
+        special_chars       = special_chars(configmod),       # wants a dict or None
+        numeric_parser      = numeric_parser(configmod),      # wants a function or None
+        text_filter         = transcription_filter(configmod) # wants a function or None
     )

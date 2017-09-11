@@ -108,7 +108,7 @@ jobs:
 
                   ### create TEI-XML
                   [ -d transcription/tei-xml ] || mkdir transcription/tei-xml/
-                  python3 ../moe-data/ci/resources/json2xml.py transcription/merged transcription/tei-xml/
+                  python3 ../moe-data/ci/resources/json2xml.py transcription/merged transcription/tei-xml/ -c transcription/config
 
                   # ### use files as they come from T-PEN
                   # [ -d transcription/tei-xml ] || mkdir transcription/tei-xml/

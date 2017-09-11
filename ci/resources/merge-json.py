@@ -13,146 +13,37 @@ import json
 import itertools
 
 
-def manuscripts ():
-    return [
-        { 'name' : 'Bz449',
-          'files' : ['Bz449 (K) .json'],
-        },
-        { 'name' : 'Bz430',
-          'files' : ['Bz430.json'],
-        },
-        { 'name' : 'M1731',
-          'files' : [
-            'M1731 (F) 1.json',
-            'M1731 (F) 2.json',
-            'M1731 (F) 3.json',
-          ]
-        },
-        { 'name' : 'M1767',
-          'files' : [
-            'M1767 (B) 1.json',
-            'M1767 (B) 2.json',
-            'M1767 (B) 3.json',
-            'M1767 (B) 4.json',
-            'M1767 (B) 5.json',
-            'M1767 (B) 6.json',
-            'M1767 (B) 7.json',
-          ]
-        },
-        { 'name' : 'M1768',
-          'files' : [
-            'M1768 (H) 1.json',
-            'M1768 (H) 2.json',
-            'M1768 (H) 3.json',
-          ]
-        },
-        { 'name' : 'M1769',
-          'files' : [
-            'M1769 (I) 1.json',
-            'M1769 (I) 2.json',
-            'M1769 (I) 3.json',
-          ]
-        },
-        { 'name' : 'M1896',
-          'files' : [
-            'M1896 (A) 1.json',
-            'M1896 (A) 2.json',
-            'M1896 (A) 3.json',
-            'M1896 (A) 4.json',
-          ]
-        },
-        { 'name' : 'M2644',
-          'files' : [
-            'M2644 (G) 1.json',
-            'M2644 (G) 2.json',
-          ]
-        },
-
-        { 'name' : 'M3071',
-          'files' : [
-            'M3071 (C).json',
-          ]
-        },
-
-        { 'name' : 'M3519',
-          'files' : [
-            'M3519 (D).json',
-          ]
-        },
-
-        { 'name' : 'M3520',
-          'files' : [
-            'M3520 (E) 1.json',
-            'M3520 (E) 2.json',
-            'M3520 (E) 3.json',
-            'M3520 (E) 4.json',
-          ]
-        },
-
-        { 'name' : 'M5587',
-          'files' : [
-            'M5587 (J) 0.json',
-            'M5587 (J) 1.json',
-            'M5587 (J) 2.json',
-            'M5587 (J) 3.json',
-            'M5587 (J) 4.json',
-          ]
-        },
-        { 'name' : 'OXE32',
-          'files' : [
-            'Ox e.32 (O) 0.json',
-            'Ox e.32 (O) 1.json',
-            'Ox e.32 (O) 2.json',
-            'Ox e.32 (O) 3.json',
-          ]
-        },
-        { 'name' : 'V887',
-          'files' : [
-            'V887 (V) 1.json',
-            'V887 (V) 2.json',
-            'V887 (V) 3.json',
-          ]
-        },
-        { 'name' : 'V901',
-          'files' : [
-            'V901 (X) 1.json',
-            'V901 (X) 2.json',
-          ]
-        },
-        { 'name' : 'V913',
-          'files' : [
-            'V913 (Y).json',
-          ]
-        },
-        { 'name' : 'V917',
-          'files' : [
-            'V917 (Z) 0.json',
-            'V917 (Z) 1.json',
-            'V917 (Z) 2.json',
-          ]
-        },
-        { 'name' : 'W243',
-          'files' : [
-            'W243 1.json',
-            'W243 2.json',
-          ]
-        },
-        { 'name' : 'W246',
-          'files' : [
-            'W246.json',
-          ]
-        },
-        { 'name' : 'W574',
-          'files' : [
-            'W574 (W) 1.json',
-            'W574 (W) 2.json',
-          ]
-        },
-    ]
+def manuscripts(indir):
+    """Figure out from the list of filenames in 'indir' which MSS we have and what 
+       their short IDs should be."""
+    allfound = []
+    jsonfiles = sorted([x for x in os.listdir(indir) if x.endswith('.json')])
+    lastms = ""
+    currdict = None
+    for f in jsonfiles:
+        thisms = f.replace('.json', '')
+        m = re.match(r'^(.*)\s+\d+\.json$', f) # it is multi-part
+        if m is not None:
+            thisms = m.group(1)
+        if thisms != lastms:
+            # Close out the last dictionary
+            if currdict is not None:
+                allfound.append(currdict)
+            # Start the new dictionary
+            lastms = thisms
+            id = re.match(r'^([^(]+\w)(\s+\()?', thisms)
+            currdict = {'name': id.group(1), 'files': [f]}
+        else:
+            currdict.get('files').append(f)
+    allfound.append(currdict)
+    return allfound
 
 
 def main (args):
-    for (name, files) in [(m['name'], m['files']) for m in manuscripts()]:
+    msset = [(m['name'], m['files']) for m in manuscripts(args.indir)]
+    if args.msid is not None:
+        msset = [m for m in msset if m[0] in args.msid]
+    for (name, files) in msset:
         if args.verbose:
             print ("merging {}".format (name))
 
@@ -192,6 +83,12 @@ if __name__ == "__main__":
     parser.add_argument (
         "outdir",
         help = "output directory",
+    )
+    parser.add_argument (
+        "-m",
+        "--msid",
+        action = "append",
+        help = "specify one or more specific manuscript IDs to parse",
     )
     parser.add_argument (
         "-w",
