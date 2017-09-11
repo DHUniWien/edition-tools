@@ -210,7 +210,7 @@ jobs:
                 - -exc
                 - |
                   echo "rearrange data for collatex ..."
-                  python3 moe-data/ci/resources/teixml2collatex.py tpen-data/transcription/tei-xml/ collatex --verbose
+                  python3 moe-data/ci/resources/teixml2collatex.py tpen-data/transcription/tei-xml/ collatex -c tpendata/transcription/config --verbose
 
                   SAVEIFS=$IFS
                   IFS=$(echo -en "\n\b")

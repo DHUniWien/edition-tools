@@ -6,163 +6,30 @@ import pprint
 import argparse
 import json
 import re
+import importlib
 
 from tpen2tei.wordtokenize import from_string
 
 
-def milestones ():
-    # grep --only-matching  --no-filename --regexp '<milestone unit="section" n=".*"/>' * | sort -u > milestones.txt
-
-    return (
-        "401",
-        "407",
-        "408",
-        "410",
-        "412",
-        "418",
-        "420",
-        "421letter",
-        "421",
-        "424",
-        "425",
-        "432",
-        "434",
-        "437",
-        "440",
-        "446",
-        "449",
-        "452",
-        "455",
-        "460",
-        "465",
-        "470",
-        "471",
-        "471prophecy",
-        "479",
-        "480",
-        "481",
-        "483",
-        "484",
-        "485",
-        "485prophecy",
-        "486",
-        "487",
-        "489",
-        "490",
-        "492",
-        "493",
-        "494",
-        "495",
-        "496",
-        "498",
-        "499",
-        "500",
-        "500prologue",
-        "502",
-        "503",
-        "504",
-        "505",
-        "507",
-        "508",
-        "511",
-        "513",
-        "514aftermath",
-        "514confession",
-        "514",
-        "515",
-        "516",
-        "518",
-        "519",
-        "520",
-        "521",
-        "523",
-        "525",
-        "526",
-        "528",
-        "530",
-        "532",
-        "533",
-        "534.2",
-        "534",
-        "535",
-        "536",
-        "538",
-        "539",
-        "540",
-        "541",
-        "542",
-        "543",
-        "544",
-        "545",
-        "546cutoff",
-        "546",
-        "547",
-        "548",
-        "549",
-        "550bk3",
-        "550",
-        "550prologue",
-        "551",
-        "552",
-        "553",
-        "554",
-        "555",
-        "556",
-        "557",
-        "558",
-        "559",
-        "560",
-        "561",
-        "562",
-        "563",
-        "564",
-        "566",
-        "567",
-        "568",
-        "569",
-        "570",
-        "571",
-        "572",
-        "573",
-        "574",
-        "575",
-        "576",
-        "577",
-        "585",
-        "586",
-        "589",
-        "591",
-        "592",
-        "592thoros",
-        "593",
-        "594",
-        "595barsegh",
-        "595",
-        "597",
-        "598",
-        "600",
-        "602b",
-        "602",
-        "603",
-        "604",
-        "605",
-        "606",
-        "608",
-        "609",
-        "610",
-        "611",
-    )
+def milestones(configmod):
+    """Returns a list of milestones that should be individually collated"""
+    if configmod is not None:
+        mst = getattr(configmod, "milestones", None)
+        if mst is not None:
+            return mst()
+    return []
 
 
-def normalise_armenian(token):
-    if token['n'] == token['t']:
-        str = token['n'].lower().replace('եւ', 'և').replace('աւ', 'օ')
-        if re.search(r'\w', str) is not None:
-            str = re.sub(r'[\W]', '', str)
-        token['n'] = str
+def normalise(configmod):
+    """Returns a function that takes a token and modifies it, or None"""
+    if configmod is not None:
+        na = getattr(configmod, "normalise", None)
+        return na
+    return None
+    
 
 
-def teixml2collatex(milestone, indir, verbose):
+def teixml2collatex(milestone, indir, verbose, configmod):
     # list elements are already so
     # that collatex can digest them
     collation = dict (witnesses = list())
@@ -182,6 +49,7 @@ def teixml2collatex(milestone, indir, verbose):
         tokens = extract_tokens (
             xmlfile   = indir + '/' + infile,
             milestone = milestone,
+            configmod = configmod
         )
 
         if tokens:
@@ -208,6 +76,7 @@ def extract_tokens (**kwa):
 
     xmlfile   = kwa.get ('xmlfile')
     milestone = kwa.get ('milestone')
+    configmod = kwa.get ('configmod')
 
     try:
         with open (xmlfile, encoding = 'utf-8') as fh:
@@ -215,7 +84,7 @@ def extract_tokens (**kwa):
                 fh.read(),
                 milestone    = milestone,
                 first_layer  = False,
-                normalisation = normalise_armenian
+                normalisation = normalise(configmod)
             )
     except FileNotFoundError:
         logging.info ('file not found: %s' % xmlfile)
@@ -242,6 +111,11 @@ if __name__ == '__main__':
         action = "store_true",
         help = "make output more verbose",
     )
+    parser.add_argument (
+        "-c",
+        "--config",
+        help = "module for custom collation logic"
+    )
 
     logging.basicConfig (
         format = '%(asctime)s %(message)s',
@@ -251,8 +125,14 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
     
-    for milestone in milestones():
-        c = teixml2collatex(milestone, args.indir, args.verbose)
+    configmod = None
+    if args.config is not None:
+        configpath = os.path.expanduser(args.config)
+        sys.path.append(os.path.dirname(configpath))
+        configmod = importlib.import_module(os.path.basename(configpath))
+    
+    for milestone in milestones(configmod):
+        c = teixml2collatex(milestone, args.indir, args.verbose, configmod)
         if c.get ('witnesses'):
             outfile = '%s/milestone-%s.json' % (args.outdir, milestone)
 
