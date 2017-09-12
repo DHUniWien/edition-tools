@@ -59,7 +59,9 @@ RUN apk update \
     perl-json-maybexs \
     perl-cpanel-json-xs \
     perl-timedate \
+    perl-datetime \
     perl-datetime-locale \
+    perl-datetime-timezone \
     perl-test-needs \
     perl-specio \
     perl-importer \
@@ -73,7 +75,13 @@ RUN apk update \
     perl-file-copy-recursive \
     perl-scope-guard \
     perl-path-tiny \
-    perl-test-differences
+    perl-test-differences \
+    perl-test-exception \
+    perl-scope-upper \
+    perl-carp-clan \
+    perl-test-deep \
+    perl-file-remove \
+    perl-clone
     # END Text::Tradition
 
 RUN wget https://cpanmin.us -O cpanm && \
