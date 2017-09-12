@@ -1,22 +1,33 @@
 ---
 resources:
+    # multiple resources pointing to the same
+    # repository are suffixed with the producer of new content
+
     # already fetched into git by cronjob at storage
     #
-    - name: tpen-data-write
-      type: git
-      source:
-        uri: {{tpen-data-uri}}
-        branch: {{tpen-data-branch}}
-        paths: [transcription]
-        private_key: {{DHUniWienMU-priv-key}}
-
-    - name: tpen-data-read
+    - name: tpen-data-tpen-backup
       type: git
       source:
         uri: {{tpen-data-uri}}
         branch: {{tpen-data-branch}}
         paths: [transcription]
         ignore_paths: [transcription/tei-xml, transcription/collatex-out]
+        private_key: {{DHUniWienMU-priv-key}}
+
+    - name: tpen-data-tpen2tei
+      type: git
+      source:
+        uri: {{tpen-data-uri}}
+        branch: {{tpen-data-branch}}
+        paths: [transcription/tei-xml]
+        private_key: {{DHUniWienMU-priv-key}}
+
+    - name: tpen-data-collate
+      type: git
+      source:
+        uri: {{tpen-data-uri}}
+        branch: {{tpen-data-branch}}
+        paths: [transcription/collatex-out]
         private_key: {{DHUniWienMU-priv-key}}
 
     - name: moe-data
@@ -66,13 +77,12 @@ jobs:
     - name: tpen2tei
       plan:
         - aggregate:
-          - get: tpen-data-read
+          - get: tpen-data-tpen-backup
             trigger: true
           - get: ssh-keys
           - get: moe-data
 
         - task: task-tpen2tei
-          input_mapping: { tpen-data: tpen-data-read }
 
           config:
             platform: linux
@@ -88,7 +98,6 @@ jobs:
               - name: ssh-keys
             outputs:
               - name: tei-xml
-              - name: tpen-data-bumped
 
             run:
               path: sh
@@ -127,17 +136,17 @@ jobs:
                       git commit -m "tpen2tei" *xml
                   fi
 
-        - put: tpen-data-write
+        - put: tpen-data-tpen2tei
           params: {repository: tpen-data-bumped}
 
     - name: validate-tei-xml
       plan:
-        - get: tpen-data-read
+        - get: tpen-data-tpen2tei
           trigger: true
           passed: [tpen2tei]
 
         - task: task-validate-tei-xml
-          input_mapping: { tpen-data: tpen-data-read }
+          input_mapping: { tpen-data: tpen-data-tpen2tei }
 
           config:
             platform: linux
@@ -176,14 +185,14 @@ jobs:
     - name: collate
       plan:
         - aggregate:
-          - get: tpen-data-read
+          - get: tpen-data-tpen2tei
             trigger: true
             passed: [validate-tei-xml]
           - get: moe-data
           - get: ssh-keys
 
         - task: task-collate
-          input_mapping: { tpen-data: tpen-data-read }
+          input_mapping: { tpen-data: tpen-data-tpen2tei }
 
           config:
             platform: linux
@@ -202,7 +211,6 @@ jobs:
               - name: collatex-out
               - name: collatex-out-svg
               - name: collatex-out-pretty
-              - name: tpen-data-bumped
 
             run:
               path: sh
@@ -260,7 +268,7 @@ jobs:
                   IFS=$SAVEIFS
 
         - task: task-collatex-to-github
-          input_mapping: { tpen-data: tpen-data-read }
+          input_mapping: { tpen-data: tpen-data-tpen2tei }
 
           config:
             platform: linux
@@ -273,8 +281,6 @@ jobs:
             inputs:
               - name: ssh-keys
               - name: collatex-out
-            outputs:
-              - name: tpen-data-bumped
 
             run:
               path: sh
@@ -307,7 +313,7 @@ jobs:
                   fi
 
 
-        - put: tpen-data-write
+        - put: tpen-data-collate
           params: {repository: tpen-data-bumped}
 
 
@@ -347,7 +353,7 @@ jobs:
     - name: create-stemmarest-instance
       plan:
         - aggregate:
-          - get: tpen-data-read
+          - get: tpen-data-collate
             trigger: true
             passed: [collate]
           - get: ssh-keys
@@ -355,7 +361,7 @@ jobs:
           - get: moe-config
 
         - task: task-create-stemmarest-instance
-          input_mapping: { tpen-data: tpen-data-read }
+          input_mapping: { tpen-data: tpen-data-collate }
 
           config:
             platform: linux
@@ -380,7 +386,7 @@ jobs:
     - name: create-stemmarest-instance-small
       plan:
         - aggregate:
-          - get: tpen-data-read
+          - get: tpen-data-collate
             trigger: true
             passed: [collate]
           - get: ssh-keys
@@ -388,7 +394,7 @@ jobs:
           - get: moe-config
 
         - task: task-create-stemmarest-instance-small
-          input_mapping: { tpen-data: tpen-data-read }
+          input_mapping: { tpen-data: tpen-data-collate }
 
           config:
             platform: linux
@@ -413,13 +419,13 @@ jobs:
     - name: feed-the-beast
       plan:
         - aggregate:
-          - get: tpen-data-read
+          - get: tpen-data-collate
             trigger: true
             passed: [create-stemmarest-instance]
           - get: netrc-test-api
 
         - task: task-feed-the-beast
-          input_mapping: { tpen-data: tpen-data-read }
+          input_mapping: { tpen-data: tpen-data-collate }
 
           config:
             platform: linux
@@ -515,13 +521,13 @@ jobs:
     - name: feed-the-beast-small
       plan:
         - aggregate:
-          - get: tpen-data-read
+          - get: tpen-data-collate
             trigger: true
-            passed: [create-stemmarest-instance]
+            passed: [create-stemmarest-instance-small]
           - get: netrc-test-api
 
         - task: task-feed-the-beast-small
-          input_mapping: { tpen-data: tpen-data-read }
+          input_mapping: { tpen-data: tpen-data-collate }
 
           config:
             platform: linux
