@@ -7,6 +7,7 @@ import argparse
 import json
 import re
 import importlib
+import statistics
 
 from tpen2tei.wordtokenize import from_string
 
@@ -38,6 +39,7 @@ def teixml2collatex(milestone, indir, verbose, configmod):
     # and look for the current milestone
     #
     # presume: one witness per file
+    mslength = []
     for infile in fnmatch.filter (os.listdir (indir), '*tei.xml'):
         if verbose:
             print ("milestone {} in file: {}".format (milestone, infile))
@@ -61,11 +63,21 @@ def teixml2collatex(milestone, indir, verbose, configmod):
                 milestone,
                 infile,
             ))
+            mslength.append(len(tokens))
         else:
             logging.info ('milestone <%s> not found in witness file <%s>' % (
                 milestone,
                 infile,
             ))
+
+    # warn and exclude if one of the witnesses seems weirdly longer than the others; it 
+    # probably indicates a missing milestone marker and can cause SVG generation to hang.
+    msmedian = statistics.median(mslength)
+    for wit in collation.get('witnesses'):
+        if len(wit.get('tokens')) > msmedian + 800:
+            print("Witness %s seems too long; excluding it from collation" % wit.get('id'),
+                    file=sys.stderr)
+            collation.get('witnesses').remove(wit)
 
     return collation
 
