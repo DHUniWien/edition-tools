@@ -98,6 +98,7 @@ jobs:
               - name: ssh-keys
             outputs:
               - name: tei-xml
+              - name: tpen-data-bumped
 
             run:
               path: sh
@@ -281,6 +282,8 @@ jobs:
             inputs:
               - name: ssh-keys
               - name: collatex-out
+            outputs:
+              - name: tpen-data-bumped
 
             run:
               path: sh
