@@ -136,7 +136,7 @@ if __name__ == '__main__':
         if c.get ('witnesses'):
             outfile = '%s/milestone-%s.json' % (args.outdir, milestone)
 
-            with open (outfile, 'w') as fh:
+            with open (outfile, 'w', encoding='utf-8') as fh:
                 json.dump (
                     c,
                     fh,
