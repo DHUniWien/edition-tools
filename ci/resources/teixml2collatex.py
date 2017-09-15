@@ -40,6 +40,7 @@ def teixml2collatex(milestone, indir, verbose, configmod):
     #
     # presume: one witness per file
     mslength = []
+    missing = []
     for infile in fnmatch.filter (os.listdir (indir), '*tei.xml'):
         if verbose:
             print ("milestone {} in file: {}".format (milestone, infile))
@@ -69,6 +70,7 @@ def teixml2collatex(milestone, indir, verbose, configmod):
                 milestone,
                 infile,
             ))
+            missing.append(witness_name)
 
     # warn and exclude if one of the witnesses seems weirdly longer than the others; it 
     # probably indicates a missing milestone marker and can cause SVG generation to hang.
@@ -79,6 +81,9 @@ def teixml2collatex(milestone, indir, verbose, configmod):
                     file=sys.stderr)
             collation.get('witnesses').remove(wit)
 
+    # note on output which files are missing milestones
+    if verbose and len(missing) > 0:
+        print("milestone %s not in witnesses: %s" % (milestone, ' '.join(missing)))
     return collation
 
 
