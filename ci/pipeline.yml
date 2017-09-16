@@ -11,7 +11,7 @@ resources:
         uri: {{tpen-data-uri}}
         branch: {{tpen-data-branch}}
         paths: [transcription]
-        ignore_paths: [transcription/tei-xml, transcription/collatex-out]
+        ignore_paths: [transcription/tei-xml, collation]
         private_key: {{DHUniWienMU-priv-key}}
 
     - name: tpen-data-tpen2tei
@@ -27,7 +27,7 @@ resources:
       source:
         uri: {{tpen-data-uri}}
         branch: {{tpen-data-branch}}
-        paths: [transcription/collatex-out]
+        paths: [collation]
         private_key: {{DHUniWienMU-priv-key}}
 
     - name: moe-data
@@ -290,29 +290,29 @@ jobs:
               args:
                 - -exc
                 - |
-                  echo "push output of collatex (json and graphml) to github ..."
+                  echo "push output of collatex (json) to github ..."
 
                   SSH_KEYS_DIR=ssh-keys
                   /bin/chmod 600 ${SSH_KEYS_DIR}/github/DHUniWienMU-id_rsa
                   export GIT_SSH_COMMAND="ssh -o StrictHostKeyChecking=no -i ssh-keys/github/DHUniWienMU-id_rsa"
 
                   git clone {{tpen-data-uri}} tpen-data-bumped
-                  [ -d tpen-data-bumped/transcription/collatex-out ] || mkdir tpen-data-bumped/transcription/collatex-out/
+                  [ -d tpen-data-bumped/collation ] || mkdir tpen-data-bumped/collation/
 
-                  cp -r collatex-out/*json tpen-data-bumped/transcription/collatex-out/
-                  cp -r collatex-out/*graphml tpen-data-bumped/transcription/collatex-out/
+                  cp -r collatex-out/*json tpen-data-bumped/collation
+                  #cp -r collatex-out/*graphml tpen-data-bumped/collation/
 
                   git config --global user.email "ci@dh.gesch.univie.ac.at"
                   git config --global user.name "moe-data/collate"
 
-                  cd tpen-data-bumped/transcription/collatex-out/
-                  git add *json *graphml
+                  cd tpen-data-bumped/collation/
+                  git add *json 
 
                   GIT_STATUS=`git status`
 
                   if echo $GIT_STATUS | grep -q "Changes to be committed:" -;
                   then
-                      git commit -m "add output of collatex" *json *graphml
+                      git commit -m "add output of collatex" *json
                   fi
 
 
@@ -485,7 +485,7 @@ jobs:
                   SECTION_ID=''
 
                   # add milestones (sections) to the new tradition
-                  for IN_FILE in tpen-data/transcription/collatex-out/milestone-*.graphml
+                  for IN_FILE in tpen-data/collation/milestone-*.json
                   do
                       FILE_NAME=${IN_FILE##*/}  # strip directory
                       SECTION_NAME=${FILE_NAME%.*}      # strip file ext.
@@ -501,7 +501,7 @@ jobs:
                           --request POST \
                           --form "name=${SECTION_NAME}" \
                           --form "file=@${IN_FILE}" \
-                          --form "filetype=collatex" \
+                          --form "filetype=cxjson" \
                       https://test.api.stemmaweb.net/moe-data/stemmarest/tradition/${TRADITION_ID}/section > create-section.response
                       cat create-section.response
 
@@ -587,7 +587,7 @@ jobs:
                   SECTION_ID=''
 
                   # add milestones (sections) to the new tradition
-                  for IN_FILE in tpen-data/transcription/collatex-out/milestone-4*.graphml
+                  for IN_FILE in tpen-data/collation/milestone-4*.json
                   do
                       FILE_NAME=${IN_FILE##*/}  # strip directory
                       SECTION_NAME=${FILE_NAME%.*}      # strip file ext.
@@ -603,7 +603,7 @@ jobs:
                           --request POST \
                           --form "name=${SECTION_NAME}" \
                           --form "file=@${IN_FILE}" \
-                          --form "filetype=collatex" \
+                          --form "filetype=cxjson" \
                       https://test.api.stemmaweb.net/small-moe-data/stemmarest/tradition/${TRADITION_ID}/section > create-section.response
                       cat create-section.response
 
@@ -689,7 +689,7 @@ jobs:
                   SECTION_ID=''
 
                   # add milestones (sections) to the new tradition
-                  for IN_FILE in tpen-data/transcription/collatex-out/milestone-*.graphml
+                  for IN_FILE in tpen-data/collation/milestone-*.json
                   do
                       FILE_NAME=${IN_FILE##*/}  # strip directory
                       SECTION_NAME=${FILE_NAME%.*}      # strip file ext.
@@ -705,7 +705,7 @@ jobs:
                           --request POST \
                           --form "name=${SECTION_NAME}" \
                           --form "file=@${IN_FILE}" \
-                          --form "filetype=collatex" \
+                          --form "filetype=cxjson" \
                       https://api.work.moe.stemmaweb.net/stemmarest/tradition/${TRADITION_ID}/section > create-section.response
 
                       cat create-section.response
