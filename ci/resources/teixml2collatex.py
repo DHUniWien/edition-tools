@@ -44,27 +44,25 @@ def teixml2collatex(milestone, indir, verbose, configmod):
     for infile in fnmatch.filter (os.listdir (indir), '*tei.xml'):
         if verbose:
             print ("milestone {} in file: {}".format (milestone, infile))
-
-        # remove file ext. and a possible substring '-merged' (exists
-        # for witnesses that were merged from multiple files into one
+            
+        # get a witness name for display by removing file extensions
         witness_name = re.sub ('-merged', '', infile[:infile.find('.')])
 
-        tokens = extract_tokens (
+        witness = extract_witness (
             xmlfile   = indir + '/' + infile,
             milestone = milestone,
             configmod = configmod
         )
 
-        if tokens:
-            collation.get ('witnesses').append (dict (
-                id     = witness_name,
-                tokens = tokens,
-            ))
+        if witness is not None and witness.get('tokens'):
+            # TEMPORARY: use file ID
+            witness['id'] = witness_name
+            collation.get ('witnesses').append (witness)
             logging.info ('milestone <%s> found in witness file <%s>' % (
                 milestone,
                 infile,
             ))
-            mslength.append(len(tokens))
+            mslength.append(len(witness.get('tokens')))
         else:
             logging.info ('milestone <%s> not found in witness file <%s>' % (
                 milestone,
@@ -72,8 +70,9 @@ def teixml2collatex(milestone, indir, verbose, configmod):
             ))
             missing.append(witness_name)
 
-    # warn and exclude if one of the witnesses seems weirdly longer than the others; it 
-    # probably indicates a missing milestone marker and can cause SVG generation to hang.
+    # warn and exclude if one of the witnesses seems weirdly longer than 
+    # the others; it probably indicates a missing milestone marker and can
+    # cause SVG generation to hang.
     msmedian = statistics.median(mslength)
     for wit in collation.get('witnesses'):
         if len(wit.get('tokens')) > msmedian + 800:
@@ -87,7 +86,7 @@ def teixml2collatex(milestone, indir, verbose, configmod):
     return collation
 
 
-def extract_tokens (**kwa):
+def extract_witness (**kwa):
     """ returns json
     """
 
@@ -99,9 +98,10 @@ def extract_tokens (**kwa):
         with open (xmlfile, encoding = 'utf-8') as fh:
             return from_string (
                 fh.read(),
-                milestone    = milestone,
-                first_layer  = False,
-                normalisation = normalise(configmod)
+                milestone     = milestone,
+                first_layer   = False,
+                normalisation = normalise(configmod),
+                id_xpath      = '//t:msDesc/@xml:id'
             )
     except FileNotFoundError:
         logging.info ('file not found: %s' % xmlfile)
