@@ -9,7 +9,7 @@ import re
 import importlib
 import statistics
 
-from tpen2tei.wordtokenize import from_string
+from tpen2tei.wordtokenize import Tokenizer
 
 
 def milestones(configmod):
@@ -41,6 +41,15 @@ def teixml2collatex(milestone, indir, verbose, configmod):
     # presume: one witness per file
     mslength = []
     missing = []
+    tokenizer_main = Tokenizer(
+        milestone=milestone, 
+        normalisation=normalise(configmod),
+        id_xpath='//t:msDesc/@xml:id')
+    tokenizer_layer = Tokenizer(
+        milestone=milestone, 
+        normalisation=normalise(configmod),
+        first_layer=True,
+        id_xpath='//t:msDesc/@xml:id')
     for infile in fnmatch.filter (os.listdir (indir), '*tei.xml'):
         if verbose:
             print ("milestone {} in file: {}".format (milestone, infile))
@@ -50,18 +59,23 @@ def teixml2collatex(milestone, indir, verbose, configmod):
 
         witness = extract_witness (
             xmlfile   = indir + '/' + infile,
-            milestone = milestone,
-            configmod = configmod
+            tokenizer = tokenizer_main
         )
 
         if witness is not None and witness.get('tokens'):
-            # TEMPORARY: use file ID
-            witness['id'] = witness_name
             collation.get ('witnesses').append (witness)
             logging.info ('milestone <%s> found in witness file <%s>' % (
                 milestone,
                 infile,
             ))
+            # Get the layer witness too
+            layerwit = extract_witness(
+                xmlfile   = indir + '/' + infile,
+                tokenizer = tokenizer_layer
+            )
+            layerwit['id'] += " (a.c.)"
+            collation.get('witnesses').append(layerwit)
+            # Note the length of the (main) witness
             mslength.append(len(witness.get('tokens')))
         else:
             logging.info ('milestone <%s> not found in witness file <%s>' % (
@@ -79,6 +93,9 @@ def teixml2collatex(milestone, indir, verbose, configmod):
             print("Witness %s seems too long; excluding it from collation" % wit.get('id'),
                     file=sys.stderr)
             collation.get('witnesses').remove(wit)
+            layerstr = "%s (a.c.)" % wit
+            if layerstr in collation.get('witnesses'):
+                collation.get('witnesses').remove(layerstr)
 
     # note on output which files are missing milestones
     if verbose and len(missing) > 0:
@@ -91,18 +108,11 @@ def extract_witness (**kwa):
     """
 
     xmlfile   = kwa.get ('xmlfile')
-    milestone = kwa.get ('milestone')
-    configmod = kwa.get ('configmod')
+    tokenizer = kwa.get ('tokenizer')
 
     try:
         with open (xmlfile, encoding = 'utf-8') as fh:
-            return from_string (
-                fh.read(),
-                milestone     = milestone,
-                first_layer   = False,
-                normalisation = normalise(configmod),
-                id_xpath      = '//t:msDesc/@xml:id'
-            )
+            return tokenizer.from_string (fh.read())
     except FileNotFoundError:
         logging.info ('file not found: %s' % xmlfile)
     except:
