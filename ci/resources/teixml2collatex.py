@@ -8,6 +8,7 @@ import json
 import re
 import importlib
 import statistics
+import datetime
 
 from tpen2tei.wordtokenize import Tokenizer
 
@@ -52,7 +53,11 @@ def teixml2collatex(milestone, indir, verbose, configmod):
         id_xpath='//t:msDesc/@xml:id')
     for infile in fnmatch.filter (os.listdir (indir), '*tei.xml'):
         if verbose:
-            print ("milestone {} in file: {}".format (milestone, infile))
+            print ("{}: milestone {} in file: {}".format (
+                datetime.datetime.now().strftime ("%a, %d %b %Y %H:%M:%S %z"),
+                milestone,
+                infile,
+            ))
 
         # get a witness name for display by removing file extensions
         witness_name = re.sub ('-merged', '', infile[:infile.find('.')])
@@ -99,7 +104,11 @@ def teixml2collatex(milestone, indir, verbose, configmod):
 
     # note on output which files are missing milestones
     if verbose and len(missing) > 0:
-        print("milestone %s not in witnesses: %s" % (milestone, ' '.join(missing)))
+        print ("{}: milestone {} not in witnesses: {}".format (
+            datetime.datetime.now().strftime ("%a, %d %b %Y %H:%M:%S %z"),
+            milestone,
+            ' '.join (missing),
+        ))
     return collation
 
 
