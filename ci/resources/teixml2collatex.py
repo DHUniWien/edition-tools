@@ -27,7 +27,7 @@ def normalise(configmod):
         na = getattr(configmod, "normalise", None)
         return na
     return None
-    
+
 
 
 def teixml2collatex(milestone, indir, verbose, configmod):
@@ -42,18 +42,18 @@ def teixml2collatex(milestone, indir, verbose, configmod):
     mslength = []
     missing = []
     tokenizer_main = Tokenizer(
-        milestone=milestone, 
+        milestone=milestone,
         normalisation=normalise(configmod),
         id_xpath='//t:msDesc/@xml:id')
     tokenizer_layer = Tokenizer(
-        milestone=milestone, 
+        milestone=milestone,
         normalisation=normalise(configmod),
         first_layer=True,
         id_xpath='//t:msDesc/@xml:id')
     for infile in fnmatch.filter (os.listdir (indir), '*tei.xml'):
         if verbose:
             print ("milestone {} in file: {}".format (milestone, infile))
-            
+
         # get a witness name for display by removing file extensions
         witness_name = re.sub ('-merged', '', infile[:infile.find('.')])
 
@@ -84,7 +84,7 @@ def teixml2collatex(milestone, indir, verbose, configmod):
             ))
             missing.append(witness_name)
 
-    # warn and exclude if one of the witnesses seems weirdly longer than 
+    # warn and exclude if one of the witnesses seems weirdly longer than
     # the others; it probably indicates a missing milestone marker and can
     # cause SVG generation to hang.
     msmedian = statistics.median(mslength)
@@ -151,13 +151,13 @@ if __name__ == '__main__':
     )
 
     args = parser.parse_args()
-    
+
     configmod = None
     if args.config is not None:
         configpath = os.path.expanduser(args.config)
         sys.path.append(os.path.dirname(configpath))
         configmod = importlib.import_module(os.path.basename(configpath))
-    
+
     for milestone in milestones(configmod):
         c = teixml2collatex(milestone, args.indir, args.verbose, configmod)
         if c.get ('witnesses'):
