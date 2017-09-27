@@ -37,11 +37,11 @@ resources:
         branch: {{moe-data-branch}}
         paths: [ci/resources]
 
-    - name: moe-config
-      type: git
-      source:
-        uri: {{moe-config-uri}}
-        private_key: {{DHUniWienMU-priv-key}}
+    # - name: moe-config
+    #   type: git
+    #   source:
+    #     uri: {{moe-config-uri}}
+    #     private_key: {{DHUniWienMU-priv-key}}
 
 
     #- name: version
@@ -66,10 +66,10 @@ resources:
         uri: {{netrc-test-api-uri}}
         private_key: {{DHUniWienMU-priv-key}}
 
-    - name: ci
-      type: git
-      source:
-        uri: {{ci-uri}}
+    # - name: ci
+    #   type: git
+    #   source:
+    #     uri: {{ci-uri}}
 
 
 jobs:
@@ -355,81 +355,49 @@ jobs:
                   echo "SVG files copied to webspace, visit https://www.ci.stemmaweb.net/moe-data/"
 
 
-    - name: create-stemmarest-instance
+    # - name: create-editions-moe-stemmarest-test
+    #   plan:
+    #     - aggregate:
+    #       - get: tpen-data-collate
+    #         trigger: true
+    #         passed: [collate]
+    #       - get: ssh-keys
+    #       - get: ci
+    #       - get: moe-config
+    # 
+    #     - task: task-create-editions-moe-stemmarest-test
+    #       input_mapping: { tpen-data: tpen-data-collate }
+    # 
+    #       config:
+    #         platform: linux
+    #         image_resource:
+    #           type: docker-image
+    #           source:
+    #             repository: {{tools-image}}
+    #             insecure_registries: [ {{insecure-registries}} ]
+    # 
+    #         inputs:
+    #           - name: ssh-keys
+    #           - name: ci
+    #           - name: moe-config
+    # 
+    #         run:
+    #           path: sh
+    #           args:
+    #             - "ci/bin/deploy.sh"
+    #             - "moe-config/deploy-editions-moe-stemmarest-test.conf"
+    # 
+
+    - name: feed-editions-moe-test
       plan:
         - aggregate:
           - get: tpen-data-collate
             trigger: true
+            # passed: [create-editions-moe-stemmarest-test]
             passed: [collate]
-          - get: ssh-keys
-          - get: ci
-          - get: moe-config
-
-        - task: task-create-stemmarest-instance
-          input_mapping: { tpen-data: tpen-data-collate }
-
-          config:
-            platform: linux
-            image_resource:
-              type: docker-image
-              source:
-                repository: {{tools-image}}
-                insecure_registries: [ {{insecure-registries}} ]
-
-            inputs:
-              - name: ssh-keys
-              - name: ci
-              - name: moe-config
-
-            run:
-              path: sh
-              args:
-                - "ci/bin/deploy.sh"
-                - "moe-config/deploy-moe-data-test.conf"
-
-
-    - name: create-stemmarest-instance-small
-      plan:
-        - aggregate:
-          - get: tpen-data-collate
-            trigger: true
-            passed: [collate]
-          - get: ssh-keys
-          - get: ci
-          - get: moe-config
-
-        - task: task-create-stemmarest-instance-small
-          input_mapping: { tpen-data: tpen-data-collate }
-
-          config:
-            platform: linux
-            image_resource:
-              type: docker-image
-              source:
-                repository: {{tools-image}}
-                insecure_registries: [ {{insecure-registries}} ]
-
-            inputs:
-              - name: ssh-keys
-              - name: ci
-              - name: moe-config
-
-            run:
-              path: sh
-              args:
-                - "ci/bin/deploy.sh"
-                - "moe-config/deploy-moe-data-test-small.conf"
-
-
-    - name: feed-the-beast
-      plan:
-        - aggregate:
-          - get: tpen-data-collate
-            trigger: true
-            passed: [create-stemmarest-instance]
           - get: netrc-test-api
 
-        - task: task-feed-the-beast
+        - task: task-feed-editions-moe-test
           input_mapping: { tpen-data: tpen-data-collate }
 
           config:
@@ -439,7 +407,6 @@ jobs:
               source:
                 repository: {{tools-image}}
                 insecure_registries: [ {{insecure-registries}} ]
-
 
             inputs:
               - name: tpen-data
@@ -457,6 +424,8 @@ jobs:
                 - -exc
                 - |
                   # create new user
+                  API_URL="https://api.editions.byzantini.st/ChronicleMETest/stemmarest"
+
                   curl \
                       --silent \
                       --insecure \
@@ -465,7 +434,7 @@ jobs:
                       --request PUT \
                       --header "Content-Type: application/json" \
                       --data '{ "role":"admin", "id":"alpha", "email":"alpha@dh.gesch", "passphrase":"user-passphrase" }' \
-                  https://test.api.stemmaweb.net/moe-data/stemmarest/user/alpha
+                  ${API_URL}/user/alpha
 
                   # new tradition
                   curl \
@@ -479,7 +448,7 @@ jobs:
                       --form "public=no" \
                       --form "userId=alpha" \
                       --form "empty=no" \
-                  https://test.api.stemmaweb.net/moe-data/stemmarest/tradition > create-tradition.response
+                  ${API_URL}/tradition > create-tradition.response
 
 
                   TRADITION_ID=`jq ".tradId" create-tradition.response | sed s/\"//g`
@@ -504,7 +473,8 @@ jobs:
                           --form "name=${SECTION_NAME}" \
                           --form "file=@${IN_FILE}" \
                           --form "filetype=cxjson" \
-                      https://test.api.stemmaweb.net/moe-data/stemmarest/tradition/${TRADITION_ID}/section > create-section.response
+                      ${API_URL}/tradition/${TRADITION_ID}/section > create-section.response
+
                       cat create-section.response
 
                       SECTION_ID=`jq ".parentId" create-section.response | sed s/\"//g`
@@ -519,19 +489,52 @@ jobs:
                   #             --netrc-file netrc-test-api/dot-netrc \
                   #             --netrc \
                   #             --request PUT \
-                  #         https://test.api.stemmaweb.net/moe-data/stemmarest/tradition/${TRADITION_ID}/section/${SECTION_ID}/orderAfter/${SECTION_ID_PREV}
+                  #         ${API_URL}/tradition/${TRADITION_ID}/section/${SECTION_ID}/orderAfter/${SECTION_ID_PREV}
                   #     fi
                   done
 
-    - name: feed-the-beast-small
+
+    # - name: create-editions-moe-stemmarest
+    #   plan:
+    #     - aggregate:
+    #       - get: tpen-data-collate
+    #         passed: [collate]
+    #       - get: ssh-keys
+    #       - get: ci
+    #       - get: moe-config
+    # 
+    #     - task: task-create-editions-moe-stemmarest
+    #       input_mapping: { tpen-data: tpen-data-collate }
+    # 
+    #       config:
+    #         platform: linux
+    #         image_resource:
+    #           type: docker-image
+    #           source:
+    #             repository: {{tools-image}}
+    #             insecure_registries: [ {{insecure-registries}} ]
+    # 
+    #         inputs:
+    #           - name: ssh-keys
+    #           - name: ci
+    #           - name: moe-config
+    # 
+    #         run:
+    #           path: sh
+    #           args:
+    #             - "ci/bin/deploy.sh"
+    #             - "moe-config/deploy-editions-moe-stemmarest.conf"
+
+
+    - name: feed-editions-moe
       plan:
         - aggregate:
           - get: tpen-data-collate
-            trigger: true
-            passed: [create-stemmarest-instance-small]
+            # passed: [create-editions-moe-stemmarest]
+            passed: [collate]
           - get: netrc-test-api
 
-        - task: task-feed-the-beast-small
+        - task: task-feed-editions-moe
           input_mapping: { tpen-data: tpen-data-collate }
 
           config:
@@ -541,7 +544,6 @@ jobs:
               source:
                 repository: {{tools-image}}
                 insecure_registries: [ {{insecure-registries}} ]
-
 
             inputs:
               - name: tpen-data
@@ -559,6 +561,8 @@ jobs:
                 - -exc
                 - |
                   # create new user
+                  API_URL="https://api.editions.byzantini.st/ChronicleME/stemmarest"
+
                   curl \
                       --silent \
                       --insecure \
@@ -567,7 +571,7 @@ jobs:
                       --request PUT \
                       --header "Content-Type: application/json" \
                       --data '{ "role":"admin", "id":"alpha", "email":"alpha@dh.gesch", "passphrase":"user-passphrase" }' \
-                  https://test.api.stemmaweb.net/small-moe-data/stemmarest/user/alpha
+                  ${API_URL}/user/alpha
 
                   # new tradition
                   curl \
@@ -581,109 +585,7 @@ jobs:
                       --form "public=no" \
                       --form "userId=alpha" \
                       --form "empty=no" \
-                  https://test.api.stemmaweb.net/small-moe-data/stemmarest/tradition > create-tradition.response
-
-
-                  TRADITION_ID=`jq ".tradId" create-tradition.response | sed s/\"//g`
-
-                  SECTION_ID=''
-
-                  # add milestones (sections) to the new tradition
-                  for IN_FILE in tpen-data/collation/milestone-4*.json
-                  do
-                      FILE_NAME=${IN_FILE##*/}  # strip directory
-                      SECTION_NAME=${FILE_NAME%.*}      # strip file ext.
-
-                      SECTION_ID_PREV=${SECTION_ID}
-                      SECTION_ID=''
-
-                      curl \
-                          --silent \
-                          --insecure \
-                          --netrc-file netrc-test-api/dot-netrc \
-                          --netrc \
-                          --request POST \
-                          --form "name=${SECTION_NAME}" \
-                          --form "file=@${IN_FILE}" \
-                          --form "filetype=cxjson" \
-                      https://test.api.stemmaweb.net/small-moe-data/stemmarest/tradition/${TRADITION_ID}/section > create-section.response
-                      cat create-section.response
-
-                      SECTION_ID=`jq ".parentId" create-section.response | sed s/\"//g`
-
-                  ### they are already in order
-                  #
-                  #     # order new milestone (section) right after previous one
-                  #     if [ -n ${SECTION_ID_PREV} ]; then
-                  #         curl \
-                  #             --silent \
-                  #             --insecure \
-                  #             --netrc-file netrc-test-api/dot-netrc \
-                  #             --netrc \
-                  #             --request PUT \
-                  #         https://test.api.stemmaweb.net/small-moe-data/stemmarest/tradition/${TRADITION_ID}/section/${SECTION_ID}/orderAfter/${SECTION_ID_PREV}
-                  #     fi
-                  done
-
-    - name: feed-the-beast-work-moe
-      plan:
-        - aggregate:
-          - get: tpen-data-collate
-            trigger: true
-            passed: [create-stemmarest-instance-small]
-          - get: netrc-test-api
-
-        - task: task-feed-the-beast-small
-          input_mapping: { tpen-data: tpen-data-collate }
-
-          config:
-            platform: linux
-            image_resource:
-              type: docker-image
-              source:
-                repository: {{tools-image}}
-                insecure_registries: [ {{insecure-registries}} ]
-
-
-            inputs:
-              - name: tpen-data
-              - name: netrc-test-api
-
-            #
-            # real string interpolation is possible starting with concourse 3.2.0 only
-            # {{}} puts the inserted string in quotes
-            # starting with 3.2.0 there is the alternative (()) which doesn't
-            # therefore values mentioned in pipeline-config.yml.dist are not yet used here
-            #
-            run:
-              path: sh
-              args:
-                - -exc
-                - |
-                  # create new user
-                  curl \
-                      --silent \
-                      --insecure \
-                      --netrc-file netrc-test-api/dot-netrc \
-                      --netrc \
-                      --request PUT \
-                      --header "Content-Type: application/json" \
-                      --data '{ "role":"admin", "id":"alpha", "email":"alpha@dh.gesch", "passphrase":"user-passphrase" }' \
-                  https://api.work.moe.stemmaweb.net/stemmarest/user/alpha
-
-                  # new tradition
-                  curl \
-                      --silent \
-                      --insecure \
-                      --netrc-file netrc-test-api/dot-netrc \
-                      --netrc \
-                      --request POST \
-                      --form "name=MatthewEdessa" \
-                      --form "language=armenian" \
-                      --form "public=no" \
-                      --form "userId=alpha" \
-                      --form "empty=no" \
-                  https://api.work.moe.stemmaweb.net/stemmarest/tradition > create-tradition.response
+                  ${API_URL}/tradition > create-tradition.response
 
 
                   TRADITION_ID=`jq ".tradId" create-tradition.response | sed s/\"//g`
@@ -708,7 +610,7 @@ jobs:
                           --form "name=${SECTION_NAME}" \
                           --form "file=@${IN_FILE}" \
                           --form "filetype=cxjson" \
-                      https://api.work.moe.stemmaweb.net/stemmarest/tradition/${TRADITION_ID}/section > create-section.response
+                      ${API_URL}/tradition/${TRADITION_ID}/section > create-section.response
 
                       cat create-section.response
 
@@ -724,6 +626,6 @@ jobs:
                   #             --netrc-file netrc-test-api/dot-netrc \
                   #             --netrc \
                   #             --request PUT \
-                  #         https://api.work.moe.stemmaweb.net/stemmarest/tradition/${TRADITION_ID}/section/${SECTION_ID}/orderAfter/${SECTION_ID_PREV}
+                  #         ${API_URL}/tradition/${TRADITION_ID}/section/${SECTION_ID}/orderAfter/${SECTION_ID_PREV}
                   #     fi
                   done
