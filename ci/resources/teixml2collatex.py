@@ -34,7 +34,7 @@ def normalise(configmod):
 def teixml2collatex(milestone, indir, verbose, configmod):
     # list elements are already so
     # that collatex can digest them
-    collation = dict (witnesses = list())
+    witnesses = []
 
     # walk through all available witnesses
     # and look for the current milestone
@@ -68,7 +68,7 @@ def teixml2collatex(milestone, indir, verbose, configmod):
         )
 
         if witness is not None and witness.get('tokens'):
-            collation.get ('witnesses').append (witness)
+            witnesses.append(witness)
             logging.info ('milestone <%s> found in witness file <%s>' % (
                 milestone,
                 infile,
@@ -79,7 +79,7 @@ def teixml2collatex(milestone, indir, verbose, configmod):
                 tokenizer = tokenizer_layer
             )
             layerwit['id'] += " (a.c.)"
-            collation.get('witnesses').append(layerwit)
+            witnesses.append(layerwit)
             # Note the length of the (main) witness
             mslength.append(len(witness.get('tokens')))
         else:
@@ -93,14 +93,13 @@ def teixml2collatex(milestone, indir, verbose, configmod):
     # the others; it probably indicates a missing milestone marker and can
     # cause SVG generation to hang.
     msmedian = statistics.median(mslength)
-    for wit in collation.get('witnesses'):
+    collation = {"witnesses": []}
+    for wit in witnesses:
         if len(wit.get('tokens')) > msmedian + 800:
             print("Witness %s seems too long; excluding it from collation" % wit.get('id'),
                     file=sys.stderr)
-            collation.get('witnesses').remove(wit)
-            layerstr = "%s (a.c.)" % wit
-            if layerstr in collation.get('witnesses'):
-                collation.get('witnesses').remove(layerstr)
+        else:
+            collation.get("witnesses").append(wit)
 
     # note on output which files are missing milestones
     if verbose and len(missing) > 0:
