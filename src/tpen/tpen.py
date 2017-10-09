@@ -4,7 +4,7 @@ import hashlib
 import logging
 from bs4 import BeautifulSoup
 import pprint
-
+import sys
 import time
 import random
 
@@ -38,6 +38,7 @@ class TPen (object):
         self.uri_index = cfg.get ('uri_index')
         self.uri_login = cfg.get ('uri_login')
         self.uri_project = cfg.get ('uri_project')
+        self.debug = cfg.get ('debug')
 
         self._projects_list = []
 
@@ -56,6 +57,12 @@ class TPen (object):
             filename = cfg.get ('logfile'),
             level = cfg.get ('loglevel'),
         )
+
+        #
+        logging.info ("[tpen.TPen] initialised")
+        logging.info ("[tpen.TPen] max_errors set to %s" % cfg.get('max_errors'))
+        logging.info ("[tpen.TPen] log_level set to %s" % cfg.get('loglevel'))
+        logging.info ("[tpen.TPen] debug-mode is %s" % (self.debug and 'on' or 'off'))
 
         # login in
         #
@@ -254,25 +261,48 @@ class TPen (object):
         data = kwa.get ('data')
         res  = None
 
-        if verb == 'post':
-            res = requests.post (
-                uri,
-                data = data,
-                cookies = self.cookies,
-                timeout = self.timeout,
-            )
-        elif verb == 'get':
-            # XXX it is no genius idea to keep this in a rather generic _request()
-            headers = dict (Accept = 'application/ld+json;charset=UTF-8')
+        errors = 0
+        while errors < self.max_errors:
+            logging.debug ("%(verb)s %(uri)s; (attempt %(attempt)s of %(max_errors)s)" % dict (
+                verb = verb.upper(),
+                uri = uri,
+                attempt = errors + 1,
+                max_errors = self.max_errors,
+            ))
 
-            res = requests.get (
-                uri,
-                headers = headers,
-                cookies = self.cookies,
-                timeout = self.timeout,
-            )
-        else:
-            raise UserWarning ('invalid verb')
+            try:
+                if verb == 'post':
+                    res = requests.post (
+                        uri,
+                        data = data,
+                        cookies = self.cookies,
+                        timeout = self.timeout,
+                    )
+                elif verb == 'get':
+                    # XXX it is no genius idea to keep this in a rather generic _request()
+                    headers = dict (Accept = 'application/ld+json;charset=UTF-8')
+
+                    res = requests.get (
+                        uri,
+                        headers = headers,
+                        cookies = self.cookies,
+                        timeout = self.timeout,
+                    )
+                else:
+                    raise UserWarning ('invalid verb')
+
+            except requests.exceptions.RequestException as e:
+                errors += 1
+                logging.error ("RequestException: %s" % e)
+            except:
+                logging.error ("Exception: %s" % sys.exc_info()[0])
+
+            finally:
+                if res:
+                    res.status_code and logging.debug ("response status_code: %s" % res.status_code)
+                    res.headers     and logging.debug ("response headers: %s" % res.headers)
+                    res.history     and logging.debug ("response history: %s" % res.history)
+
 
         # status-code seems always 200, body sometimes empty
         #
