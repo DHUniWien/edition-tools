@@ -261,12 +261,13 @@ class TPen (object):
         data = kwa.get ('data')
         res  = None
 
-        errors = 0
-        while errors < self.max_errors:
+        tries = 0
+        request_ok = False
+        while not request_ok and tries < self.max_errors:
             logging.debug ("%(verb)s %(uri)s; (attempt %(attempt)s of %(max_errors)s)" % dict (
                 verb = verb.upper(),
                 uri = uri,
-                attempt = errors + 1,
+                attempt = tries + 1,
                 max_errors = self.max_errors,
             ))
 
@@ -292,17 +293,16 @@ class TPen (object):
                     raise UserWarning ('invalid verb')
 
             except requests.exceptions.RequestException as e:
-                errors += 1
                 logging.error ("RequestException: %s" % e)
+                res and log_res (res)
             except:
                 logging.error ("Exception: %s" % sys.exc_info()[0])
+                res and log_res (res)
+            else:
+                request_ok = True
 
             finally:
-                if res:
-                    res.status_code and logging.debug ("response status_code: %s" % res.status_code)
-                    res.headers     and logging.debug ("response headers: %s" % res.headers)
-                    res.history     and logging.debug ("response history: %s" % res.history)
-
+                tries += 1
 
         # status-code seems always 200, body sometimes empty
         #
