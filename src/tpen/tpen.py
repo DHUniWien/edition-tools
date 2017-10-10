@@ -279,6 +279,19 @@ class TPen (object):
                         cookies = self.cookies,
                         timeout = self.timeout,
                     )
+
+                    # requests (like browsers) will only GET after a redirect
+                    # POST requests must therefore be repeated, otherwise t-pen login won't work
+                    # note: serving subsequent requests, t-pen.org may redirect multiple times (301s and 302s)
+                    #
+                    if res.history:
+                        res = requests.post (
+                            res.url,
+                            data = data,
+                            cookies = self.cookies,
+                            timeout = self.timeout,
+                        )
+
                 elif verb == 'get':
                     # XXX it is no genius idea to keep this in a rather generic _request()
                     headers = dict (Accept = 'application/ld+json;charset=UTF-8')
