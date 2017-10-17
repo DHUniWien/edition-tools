@@ -13,9 +13,11 @@ def run (cmd):
 
     cp = subprocess.run (  # ISA CompletedProcess
         cmd,
-        stdout  = subprocess.PIPE,
-        stderr  = subprocess.PIPE,
-        timeout = 60,  # raises TimeoutExpired
+    # disabled for the moment because these options
+    # cause trouble inside of a container
+    #    stdout  = subprocess.PIPE,
+    #    stderr  = subprocess.PIPE,
+    #    timeout = 60,  # raises TimeoutExpired
     )
 
     if cp.returncode:
