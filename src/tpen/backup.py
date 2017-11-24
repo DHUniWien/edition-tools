@@ -44,7 +44,7 @@ def backup (**kwa):
         #
         for f in os.listdir():
             if f in config.get ('keeplist'):
-                logging.error ('keeping file <%s> although it seems obsolete' % f)
+                logging.error ('keeping file <%s>' % f)
 
             # delete what is not on T-PEN anymore
             elif f not in ['%s.json' % p.get ('label') for p in tpen.projects_list()]:
