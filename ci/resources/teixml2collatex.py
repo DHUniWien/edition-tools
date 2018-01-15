@@ -30,11 +30,20 @@ def normalise(configmod):
     return None
 
 
+def unfinished(configmod):
+    """Returns a list of manuscripts that aren't to be collated yet"""
+    if configmod is not None:
+        unf = getattr(configmod, "unfinished", None)
+        if unf is not None:
+            return unf()
+    return []
+
 
 def teixml2collatex(milestone, indir, verbose, configmod):
     # list elements are already so
     # that collatex can digest them
     witnesses = []
+    skipwit = unfinished(configmod)
 
     # walk through all available witnesses
     # and look for the current milestone
@@ -61,6 +70,10 @@ def teixml2collatex(milestone, indir, verbose, configmod):
 
         # get a witness name for display by removing file extensions
         witness_name = re.sub ('-merged', '', infile[:infile.find('.')])
+        if witness_name in skipwit:
+            if verbose:
+                print('skipping unfinished witness %s' % witness_name)
+            continue
 
         witness = extract_witness (
             xmlfile   = indir + '/' + infile,
