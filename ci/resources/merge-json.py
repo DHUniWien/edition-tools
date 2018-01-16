@@ -17,10 +17,13 @@ def manuscripts(indir):
     """Figure out from the list of filenames in 'indir' which MSS we have and what 
        their short IDs should be."""
     allfound = []
+    special = ['members.json']
     jsonfiles = sorted([x for x in os.listdir(indir) if x.endswith('.json')])
     lastms = ""
     currdict = None
     for f in jsonfiles:
+        if f in special:
+            continue
         thisms = f.replace('.json', '')
         m = re.match(r'^(.*)\s+\d+\.json$', f) # it is multi-part
         if m is not None:
