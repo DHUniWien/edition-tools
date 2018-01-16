@@ -6,6 +6,7 @@ import os
 import re
 import logging
 import datetime
+import json
 
 from tpen import TPen
 from command import run
@@ -36,15 +37,23 @@ def backup (**kwa):
     config = kwa.get ('config')
 
     with tempfile.TemporaryDirectory() as tmpdir:
+        logging.info("temp directory is %s" % tmpdir)
         os.chdir (tmpdir)
         run (['/usr/bin/git', 'clone',  repo])
         os.chdir (repo_name + '/transcription/')
+        project_members = dict()
+        new_members = set()
 
         # delete obsolete files
         #
         for f in os.listdir():
             if f in config.get ('keeplist'):
                 logging.error ('keeping file <%s>' % f)
+                
+            # scan existing project members
+            elif f == 'members.json':
+                with open(f, encoding='utf-8') as fh:
+                    project_members = json.load(fh)
 
             # delete what is not on T-PEN anymore
             elif f not in ['%s.json' % p.get ('label') for p in tpen.projects_list()]:
@@ -68,14 +77,33 @@ def backup (**kwa):
                 )
 
             elif project.get ('data'):
+                content = project.get('data')
                 with open ('./%s.json' % (project.get ('label')), 'w') as fh:
-                    fh.write (project.get ('data'))
+                    # Scan the data for new user IDs
+                    for m in re.finditer(r'\"_tpen_creator\"\s+:\s+(\d+)', content):
+                        if m.group(1) not in project_members:
+                            new_members.add(m.group(1))
+                    fh.write (content)
 
             # option write-garbage
             else:
                 logging.info ('no data for project <%s>' % project.get ('tpen_id'))
                 with open ('./%s.json.garbage' % (project.get ('label')), 'w') as fh:
                     fh.write (project.get ('garbage'))
+                    
+        # look up and add any new users we found
+        found_new_member = False
+        for uid in new_members:
+            newuser = tpen.user(uid = uid)
+            logging.debug('retrieved new user %s' % newuser)
+            if newuser is not None:
+                found_new_member = True
+                project_members[uid] = newuser
+                
+        # write the userlist to a file
+        if found_new_member:
+            with open ('./members.json', 'w', encoding='utf-8') as fh:
+                json.dump(project_members, fh, ensure_ascii=False, indent=2)
 
         # add all  *.json files for later  inspection just in case,  but not the
         # .garbage files, never  the *.garbage files; they are  for looking, not

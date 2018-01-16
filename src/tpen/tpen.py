@@ -38,6 +38,7 @@ class TPen (object):
         self.uri_index = cfg.get ('uri_index')
         self.uri_login = cfg.get ('uri_login')
         self.uri_project = cfg.get ('uri_project')
+        self.uri_user = cfg.get('uri_user')
         self.debug = cfg.get ('debug')
 
         self._projects_list = []
@@ -208,7 +209,25 @@ class TPen (object):
         return [ self.project (project = project)
             for project in self.projects_list()
         ]
-
+        
+        
+    def user (self, **kwa):
+        """look up a user by ID and return its info hash"""
+        
+        info_ok = False
+        errors  = 0
+        while errors < self.max_errors and not info_ok:
+            res = self._request (self.uri_user + str (kwa.get ('uid')))
+            if res.status_code != 200:
+                errors += 1
+            else:
+                info_ok = True
+                
+        if info_ok:
+            return res.json()
+        else:
+            return None
+    
 
     def _request (self, uri, **kwa):
         """ issues a request to the given uri and return the response as is
@@ -238,7 +257,7 @@ class TPen (object):
 
             else:
                 ok = True
-                logging.debug ('requeset went ok')
+                logging.debug ('request went ok')
 
         if ex:
             logging.exception (
