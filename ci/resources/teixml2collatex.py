@@ -51,15 +51,6 @@ def teixml2collatex(milestone, indir, verbose, configmod):
     # presume: one witness per file
     mslength = []
     missing = []
-    tokenizer_main = Tokenizer(
-        milestone=milestone,
-        normalisation=normalise(configmod),
-        id_xpath='//t:msDesc/@xml:id')
-    tokenizer_layer = Tokenizer(
-        milestone=milestone,
-        normalisation=normalise(configmod),
-        first_layer=True,
-        id_xpath='//t:msDesc/@xml:id')
     for infile in fnmatch.filter (os.listdir (indir), '*tei.xml'):
         if verbose:
             print ("{}: milestone {} in file: {}".format (
@@ -75,10 +66,7 @@ def teixml2collatex(milestone, indir, verbose, configmod):
                 print('skipping unfinished witness %s' % witness_name)
             continue
 
-        witness = extract_witness (
-            xmlfile   = indir + '/' + infile,
-            tokenizer = tokenizer_main
-        )
+        witness = extract_witness(indir + '/' + infile, milestone, normalise(configmod))
 
         if witness is not None and witness.get('tokens'):
             witnesses.append(witness)
@@ -87,12 +75,10 @@ def teixml2collatex(milestone, indir, verbose, configmod):
                 infile,
             ))
             # Get the layer witness too
-            layerwit = extract_witness(
-                xmlfile   = indir + '/' + infile,
-                tokenizer = tokenizer_layer
-            )
-            layerwit['id'] += " (a.c.)"
-            witnesses.append(layerwit)
+            layerwit = extract_witness(indir + '/' + infile, milestone, normalise(configmod), True)
+            if layerwit.get('tokens'):
+                layerwit['id'] += " (a.c.)"
+                witnesses.append(layerwit)
             # Note the length of the (main) witness
             mslength.append(len(witness.get('tokens')))
         else:
@@ -124,19 +110,23 @@ def teixml2collatex(milestone, indir, verbose, configmod):
     return collation
 
 
-def extract_witness (**kwa):
+def extract_witness (xmlfile, milestone, normalisation, first_layer=False):
     """ returns json
     """
 
-    xmlfile   = kwa.get ('xmlfile')
-    tokenizer = kwa.get ('tokenizer')
+    tokenizer = Tokenizer(
+        milestone=milestone,
+        normalisation=normalisation,
+        first_layer=first_layer,
+        id_xpath='//t:msDesc/@xml:id')
 
     try:
         with open (xmlfile, encoding = 'utf-8') as fh:
             return tokenizer.from_string (fh.read())
     except FileNotFoundError:
-        logging.info ('file not found: %s' % xmlfile)
+        print('file not found: %s' % xmlfile, file=sys.stderr)
     except:
+        print('Caught Python exception trying to tokenise %s; see log' % xmlfile, file=sys.stderr)
         logging.info ('exception type: %s' % sys.exc_info()[0])
         logging.info ('exception value: %s' % sys.exc_info()[1])
         logging.info ('exception trace: %s' % sys.exc_info()[2])
