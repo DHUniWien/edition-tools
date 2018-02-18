@@ -236,7 +236,7 @@ jobs:
                           OUT_FILE_DOT=collatex-out/$NAME.dot
                           SVG_FILE=collatex-out-svg/$NAME.svg
 
-                          CMD_TIMEOUT="timeout -t 600 "
+                          CMD_TIMEOUT="timeout -t 1000 "
 
                           # json will be bautified later
                           CMD_COLLATE_JSON="java -jar /root/collatex.jar --tokenized --format json $IN_FILE --output $OUT_FILE_JSON"
@@ -364,10 +364,10 @@ jobs:
     #       - get: ssh-keys
     #       - get: ci
     #       - get: moe-config
-    # 
+    #
     #     - task: task-create-editions-moe-stemmarest-test
     #       input_mapping: { tpen-data: tpen-data-collate }
-    # 
+    #
     #       config:
     #         platform: linux
     #         image_resource:
@@ -375,18 +375,18 @@ jobs:
     #           source:
     #             repository: {{tools-image}}
     #             insecure_registries: [ {{insecure-registries}} ]
-    # 
+    #
     #         inputs:
     #           - name: ssh-keys
     #           - name: ci
     #           - name: moe-config
-    # 
+    #
     #         run:
     #           path: sh
     #           args:
     #             - "ci/bin/deploy.sh"
     #             - "moe-config/deploy-editions-moe-stemmarest-test.conf"
-    # 
+    #
 
     - name: feed-editions-moe-test
       plan:
@@ -429,7 +429,7 @@ jobs:
                   curl \
                       --silent \
                       --insecure \
-                      --netrc-file netrc-test-api/dot-netrc \
+                      --netrc-file netrc-test-api/dot-netrc-editions.byzantini.st \
                       --netrc \
                       --request PUT \
                       --header "Content-Type: application/json" \
@@ -440,7 +440,7 @@ jobs:
                   curl \
                       --silent \
                       --insecure \
-                      --netrc-file netrc-test-api/dot-netrc \
+                      --netrc-file netrc-test-api/dot-netrc-editions.byzantini.st \
                       --netrc \
                       --request POST \
                       --form "name=MatthewEdessa" \
@@ -467,7 +467,7 @@ jobs:
                       curl \
                           --silent \
                           --insecure \
-                          --netrc-file netrc-test-api/dot-netrc \
+                          --netrc-file netrc-test-api/dot-netrc-editions.byzantini.st \
                           --netrc \
                           --request POST \
                           --form "name=${SECTION_NAME}" \
@@ -487,6 +487,7 @@ jobs:
                   #             --silent \
                   #             --insecure \
                   #             --netrc-file netrc-test-api/dot-netrc \
+                  #             --netrc-file netrc-test-api/dot-netrc-editions.byzantini.st \
                   #             --netrc \
                   #             --request PUT \
                   #         ${API_URL}/tradition/${TRADITION_ID}/section/${SECTION_ID}/orderAfter/${SECTION_ID_PREV}
@@ -502,10 +503,10 @@ jobs:
     #       - get: ssh-keys
     #       - get: ci
     #       - get: moe-config
-    # 
+    #
     #     - task: task-create-editions-moe-stemmarest
     #       input_mapping: { tpen-data: tpen-data-collate }
-    # 
+    #
     #       config:
     #         platform: linux
     #         image_resource:
@@ -513,12 +514,12 @@ jobs:
     #           source:
     #             repository: {{tools-image}}
     #             insecure_registries: [ {{insecure-registries}} ]
-    # 
+    #
     #         inputs:
     #           - name: ssh-keys
     #           - name: ci
     #           - name: moe-config
-    # 
+    #
     #         run:
     #           path: sh
     #           args:
@@ -566,7 +567,7 @@ jobs:
                   curl \
                       --silent \
                       --insecure \
-                      --netrc-file netrc-test-api/dot-netrc \
+                      --netrc-file netrc-test-api/dot-netrc-editions.byzantini.st \
                       --netrc \
                       --request PUT \
                       --header "Content-Type: application/json" \
@@ -577,7 +578,7 @@ jobs:
                   curl \
                       --silent \
                       --insecure \
-                      --netrc-file netrc-test-api/dot-netrc \
+                      --netrc-file netrc-test-api/dot-netrc-editions.byzantini.st \
                       --netrc \
                       --request POST \
                       --form "name=MatthewEdessa" \
@@ -604,7 +605,7 @@ jobs:
                       curl \
                           --silent \
                           --insecure \
-                          --netrc-file netrc-test-api/dot-netrc \
+                          --netrc-file netrc-test-api/dot-netrc-editions.byzantini.st \
                           --netrc \
                           --request POST \
                           --form "name=${SECTION_NAME}" \
@@ -623,7 +624,7 @@ jobs:
                   #         curl \
                   #             --silent \
                   #             --insecure \
-                  #             --netrc-file netrc-test-api/dot-netrc \
+                  #             --netrc-file netrc-test-api/dot-netrc-editions.byzantini.st \
                   #             --netrc \
                   #             --request PUT \
                   #         ${API_URL}/tradition/${TRADITION_ID}/section/${SECTION_ID}/orderAfter/${SECTION_ID_PREV}
