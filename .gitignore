@@ -2,3 +2,4 @@ src/tpen/backup.yml
 src/tpen/backup.log
 ci/git-ssh
 ci/pipeline-config.yml
+__pycache__
