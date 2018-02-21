@@ -102,7 +102,6 @@ jobs:
           - get: tpen-data-tpen-backup
             trigger: true
             passed: [tpen-backup]
-          - get: ssh-keys
           - get: moe-data
 
         - task: task-tpen2tei
@@ -117,7 +116,7 @@ jobs:
 
             inputs:
               - name: moe-data
-              - name: ssh-keys
+              - name: tpen-data-tpen-backup
             outputs:
               - name: tei-xml
               - name: tpen-data-bumped
@@ -127,10 +126,8 @@ jobs:
               args:
                 - -exc
                 - |
-                  chmod 600 ssh-keys/github/DHUniWienMU-id_rsa
-                  export GIT_SSH_COMMAND="ssh -o StrictHostKeyChecking=no -i ssh-keys/github/DHUniWienMU-id_rsa"
-
-                  git clone {{tpen-data-uri}} tpen-data-bumped
+                  (cd tpen-data-tpen-backup && git checkout master)
+                  git clone tpen-data-tpen-backup tpen-data-bumped
 
                   cd tpen-data-bumped
 
@@ -228,7 +225,6 @@ jobs:
             inputs:
               - name: tpen-data
               - name: moe-data
-              - name: ssh-keys
             outputs:
               - name: collatex
               - name: collatex-out
@@ -254,16 +250,13 @@ jobs:
                           NAME=${NAME%.*}      # strip file ext.
 
                           OUT_FILE_JSON=collatex-out/$NAME.json
-                          #OUT_FILE_GRAPHML=collatex-out/$NAME.graphml
                           OUT_FILE_DOT=collatex-out/$NAME.dot
                           SVG_FILE=collatex-out-svg/$NAME.svg
 
                           CMD_TIMEOUT="timeout -t 1000 "
 
-                          # json will be bautified later
+                          # json will be beautified later
                           CMD_COLLATE_JSON="java -jar /root/collatex.jar --tokenized --format json $IN_FILE --output $OUT_FILE_JSON"
-
-                          #CMD_COLLATE_GRAPHML="java -jar /root/collatex.jar --tokenized --format graphml $IN_FILE --output $OUT_FILE_GRAPHML"
 
                           # dot2svg
                           CMD_COLLATE_DOT="java -jar /root/collatex.jar --tokenized --format dot $IN_FILE --output $OUT_FILE_DOT"
@@ -271,9 +264,6 @@ jobs:
 
                           echo `date -R`: $CMD_COLLATE_JSON
                           $CMD_TIMEOUT $CMD_COLLATE_JSON
-
-                          #echo `date -R`: $CMD_COLLATE_GRAPHML
-                          #$CMD_TIMEOUT $CMD_COLLATE_GRAPHML
 
                           echo `date -R`: $CMD_COLLATE_DOT
                           $CMD_TIMEOUT $CMD_COLLATE_DOT
@@ -304,7 +294,7 @@ jobs:
                 insecure_registries: [ {{insecure-registries}} ]
 
             inputs:
-              - name: ssh-keys
+              - name: tpen-data
               - name: collatex-out
             outputs:
               - name: tpen-data-bumped
@@ -316,15 +306,11 @@ jobs:
                 - |
                   echo "push output of collatex (json) to github ..."
 
-                  SSH_KEYS_DIR=ssh-keys
-                  /bin/chmod 600 ${SSH_KEYS_DIR}/github/DHUniWienMU-id_rsa
-                  export GIT_SSH_COMMAND="ssh -o StrictHostKeyChecking=no -i ssh-keys/github/DHUniWienMU-id_rsa"
-
-                  git clone {{tpen-data-uri}} tpen-data-bumped
+                  (cd tpen-data && git checkout master)
+                  git clone tpen-data tpen-data-bumped
                   [ -d tpen-data-bumped/collation ] || mkdir tpen-data-bumped/collation/
 
                   cp -r collatex-out/*json tpen-data-bumped/collation
-                  #cp -r collatex-out/*graphml tpen-data-bumped/collation/
 
                   git config --global user.email "ci@dh.gesch.univie.ac.at"
                   git config --global user.name "moe-data/collate"
@@ -381,7 +367,6 @@ jobs:
         - aggregate:
           - get: tpen-data-collate
             trigger: true
-            # passed: [create-editions-moe-stemmarest-test]
             passed: [collate]
           - get: netrc-test-api
 
