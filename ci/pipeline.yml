@@ -3,8 +3,6 @@ resources:
     # multiple resources pointing to the same
     # repository are suffixed with the producer of new content
 
-    # already fetched into git by cronjob at storage
-    #
     - name: tpen-data-tpen-backup
       type: git
       source:
@@ -37,23 +35,6 @@ resources:
         branch: {{moe-data-branch}}
         paths: [ci/resources]
 
-    # - name: moe-config
-    #   type: git
-    #   source:
-    #     uri: {{moe-config-uri}}
-    #     private_key: {{DHUniWienMU-priv-key}}
-
-
-    #- name: version
-    #  type: semver
-    #  source:
-    #    driver: git
-    #    uri: {{version-uri}}
-    #    branch: {{version-branch}}
-    #    file: {{version-file}}
-    #    initial_version: "0.0.0"
-    #    private_key: {{DHUniWienMU-priv-key}}
-
     - name: ssh-keys
       type: git
       source:
@@ -66,19 +47,61 @@ resources:
         uri: {{netrc-test-api-uri}}
         private_key: {{DHUniWienMU-priv-key}}
 
-    # - name: ci
-    #   type: git
-    #   source:
-    #     uri: {{ci-uri}}
+    - name: daily
+      type: time
+      source:
+        start: 6:00 AM
+        stop: 12:00 PM
 
 
 jobs:
+
+    - name: tpen-backup
+      plan:
+        - aggregate:
+          - get: daily
+            trigger: true
+          - get: tpen-data-tpen-backup
+
+        - task: task-tpen-backup
+
+          config:
+            platform: linux
+            image_resource:
+              type: docker-image
+              source:
+                repository: {{tools-image}}
+                insecure_registries: [ {{insecure-registries}} ]
+
+            inputs:
+              - name: tpen-data-tpen-backup
+            outputs:
+              - name: do-backup
+            run:
+              path: sh
+              args:
+                - -exc
+                - |
+                  # NO IDEA why this is necessary, but otherwise the source
+                  # repo is in detached-head state...
+                  (cd tpen-data-tpen-backup && git checkout master)
+                  git clone tpen-data-tpen-backup do-backup
+                  /root/tpen/backup.py do-backup
+                  git config --global user.name "tools/tpen-backup"
+                  git config --global user.email "ci@dh.gesch.univie.ac.at"
+                  cd do-backup && git add transcription/*.json
+                  git commit -m "T-PEN backup automagick"
+
+        - put: tpen-data-tpen-backup
+          params:
+            repository: do-backup
 
     - name: tpen2tei
       plan:
         - aggregate:
           - get: tpen-data-tpen-backup
             trigger: true
+            passed: [tpen-backup]
           - get: ssh-keys
           - get: moe-data
 
@@ -93,7 +116,6 @@ jobs:
                 insecure_registries: [ {{insecure-registries}} ]
 
             inputs:
-              ### - name: tpen-data
               - name: moe-data
               - name: ssh-keys
             outputs:
@@ -354,40 +376,6 @@ jobs:
 
                   echo "SVG files copied to webspace, visit https://www.ci.stemmaweb.net/moe-data/"
 
-
-    # - name: create-editions-moe-stemmarest-test
-    #   plan:
-    #     - aggregate:
-    #       - get: tpen-data-collate
-    #         trigger: true
-    #         passed: [collate]
-    #       - get: ssh-keys
-    #       - get: ci
-    #       - get: moe-config
-    #
-    #     - task: task-create-editions-moe-stemmarest-test
-    #       input_mapping: { tpen-data: tpen-data-collate }
-    #
-    #       config:
-    #         platform: linux
-    #         image_resource:
-    #           type: docker-image
-    #           source:
-    #             repository: {{tools-image}}
-    #             insecure_registries: [ {{insecure-registries}} ]
-    #
-    #         inputs:
-    #           - name: ssh-keys
-    #           - name: ci
-    #           - name: moe-config
-    #
-    #         run:
-    #           path: sh
-    #           args:
-    #             - "ci/bin/deploy.sh"
-    #             - "moe-config/deploy-editions-moe-stemmarest-test.conf"
-    #
-
     - name: feed-editions-moe-test
       plan:
         - aggregate:
@@ -428,7 +416,6 @@ jobs:
 
                   curl \
                       --silent \
-                      --insecure \
                       --netrc-file netrc-test-api/dot-netrc-editions.byzantini.st \
                       --netrc \
                       --request PUT \
@@ -439,7 +426,6 @@ jobs:
                   # new tradition
                   curl \
                       --silent \
-                      --insecure \
                       --netrc-file netrc-test-api/dot-netrc-editions.byzantini.st \
                       --netrc \
                       --request POST \
@@ -466,7 +452,6 @@ jobs:
 
                       curl \
                           --silent \
-                          --insecure \
                           --netrc-file netrc-test-api/dot-netrc-editions.byzantini.st \
                           --netrc \
                           --request POST \
@@ -478,53 +463,7 @@ jobs:
                       cat create-section.response
 
                       SECTION_ID=`jq ".parentId" create-section.response | sed s/\"//g`
-
-                  ### they are already in order
-                  #
-                  #     # order new milestone (section) right after previous one
-                  #     if [ -n ${SECTION_ID_PREV} ]; then
-                  #         curl \
-                  #             --silent \
-                  #             --insecure \
-                  #             --netrc-file netrc-test-api/dot-netrc \
-                  #             --netrc-file netrc-test-api/dot-netrc-editions.byzantini.st \
-                  #             --netrc \
-                  #             --request PUT \
-                  #         ${API_URL}/tradition/${TRADITION_ID}/section/${SECTION_ID}/orderAfter/${SECTION_ID_PREV}
-                  #     fi
                   done
-
-
-    # - name: create-editions-moe-stemmarest
-    #   plan:
-    #     - aggregate:
-    #       - get: tpen-data-collate
-    #         passed: [collate]
-    #       - get: ssh-keys
-    #       - get: ci
-    #       - get: moe-config
-    #
-    #     - task: task-create-editions-moe-stemmarest
-    #       input_mapping: { tpen-data: tpen-data-collate }
-    #
-    #       config:
-    #         platform: linux
-    #         image_resource:
-    #           type: docker-image
-    #           source:
-    #             repository: {{tools-image}}
-    #             insecure_registries: [ {{insecure-registries}} ]
-    #
-    #         inputs:
-    #           - name: ssh-keys
-    #           - name: ci
-    #           - name: moe-config
-    #
-    #         run:
-    #           path: sh
-    #           args:
-    #             - "ci/bin/deploy.sh"
-    #             - "moe-config/deploy-editions-moe-stemmarest.conf"
 
 
     - name: feed-editions-moe
@@ -566,7 +505,6 @@ jobs:
 
                   curl \
                       --silent \
-                      --insecure \
                       --netrc-file netrc-test-api/dot-netrc-editions.byzantini.st \
                       --netrc \
                       --request PUT \
@@ -577,7 +515,6 @@ jobs:
                   # new tradition
                   curl \
                       --silent \
-                      --insecure \
                       --netrc-file netrc-test-api/dot-netrc-editions.byzantini.st \
                       --netrc \
                       --request POST \
@@ -604,7 +541,6 @@ jobs:
 
                       curl \
                           --silent \
-                          --insecure \
                           --netrc-file netrc-test-api/dot-netrc-editions.byzantini.st \
                           --netrc \
                           --request POST \
@@ -617,16 +553,4 @@ jobs:
 
                       SECTION_ID=`jq ".parentId" create-section.response | sed s/\"//g`
 
-                  ### they are already in order
-                  #
-                  #     # order new milestone (section) right after previous one
-                  #     if [ -n ${SECTION_ID_PREV} ]; then
-                  #         curl \
-                  #             --silent \
-                  #             --insecure \
-                  #             --netrc-file netrc-test-api/dot-netrc-editions.byzantini.st \
-                  #             --netrc \
-                  #             --request PUT \
-                  #         ${API_URL}/tradition/${TRADITION_ID}/section/${SECTION_ID}/orderAfter/${SECTION_ID_PREV}
-                  #     fi
                   done
