@@ -3,6 +3,13 @@ resources:
     # multiple resources pointing to the same
     # repository are suffixed with the producer of new content
 
+    - name: tpen-data-orig
+      type: git
+      source:
+        uri: {{tpen-data-uri}}
+        branch: {{tpen-data-branch}}
+        private_key: {{DHUniWienMU-priv-key}}
+
     - name: tpen-data-tpen-backup
       type: git
       source:
@@ -61,7 +68,7 @@ jobs:
         - aggregate:
           - get: daily
             trigger: true
-          - get: tpen-data-tpen-backup
+          - get: tpen-data-orig
 
         - task: task-tpen-backup
 
@@ -74,7 +81,7 @@ jobs:
                 insecure_registries: [ {{insecure-registries}} ]
 
             inputs:
-              - name: tpen-data-tpen-backup
+              - name: tpen-data-orig
             outputs:
               - name: do-backup
             run:
@@ -84,13 +91,17 @@ jobs:
                 - |
                   # NO IDEA why this is necessary, but otherwise the source
                   # repo is in detached-head state...
-                  (cd tpen-data-tpen-backup && git checkout master)
-                  git clone tpen-data-tpen-backup do-backup
+                  (cd tpen-data-orig && git checkout master)
+                  git clone tpen-data-orig do-backup
                   /root/tpen/backup.py do-backup
                   git config --global user.name "tools/tpen-backup"
                   git config --global user.email "ci@dh.gesch.univie.ac.at"
                   cd do-backup && git add transcription/*.json
-                  git commit -m "T-PEN backup automagick"
+                  GIT_STATUS=`git status`
+                  if echo $GIT_STATUS | grep -q "Changes to be committed:" -;
+                  then
+                      git commit -m "T-PEN backup automagick"
+                  fi
 
         - put: tpen-data-tpen-backup
           params:
@@ -209,7 +220,6 @@ jobs:
             trigger: true
             passed: [validate-tei-xml]
           - get: moe-data
-          - get: ssh-keys
 
         - task: task-collate
           input_mapping: { tpen-data: tpen-data-tpen2tei }
@@ -250,8 +260,8 @@ jobs:
                           NAME=${NAME%.*}      # strip file ext.
 
                           OUT_FILE_JSON=collatex-out/$NAME.json
-                          OUT_FILE_DOT=collatex-out/$NAME.dot
-                          SVG_FILE=collatex-out-svg/$NAME.svg
+                          # OUT_FILE_DOT=collatex-out/$NAME.dot
+                          # SVG_FILE=collatex-out-svg/$NAME.svg
 
                           CMD_TIMEOUT="timeout -t 1000 "
 
@@ -259,17 +269,17 @@ jobs:
                           CMD_COLLATE_JSON="java -jar /root/collatex.jar --tokenized --format json $IN_FILE --output $OUT_FILE_JSON"
 
                           # dot2svg
-                          CMD_COLLATE_DOT="java -jar /root/collatex.jar --tokenized --format dot $IN_FILE --output $OUT_FILE_DOT"
-                          CMD_SVG="dot -Grankdir=LR -Tsvg $OUT_FILE_DOT -o $SVG_FILE"
+                          # CMD_COLLATE_DOT="java -jar /root/collatex.jar --tokenized --format dot $IN_FILE --output $OUT_FILE_DOT"
+                          # CMD_SVG="dot -Grankdir=LR -Tsvg $OUT_FILE_DOT -o $SVG_FILE"
 
                           echo `date -R`: $CMD_COLLATE_JSON
                           $CMD_TIMEOUT $CMD_COLLATE_JSON
 
-                          echo `date -R`: $CMD_COLLATE_DOT
-                          $CMD_TIMEOUT $CMD_COLLATE_DOT
+                          # echo `date -R`: $CMD_COLLATE_DOT
+                          # $CMD_TIMEOUT $CMD_COLLATE_DOT
 
-                          echo `date -R`: $CMD_SVG
-                          $CMD_TIMEOUT $CMD_SVG
+                          # echo `date -R`: $CMD_SVG
+                          # $CMD_TIMEOUT $CMD_SVG
                       done
                   '
 
@@ -330,38 +340,6 @@ jobs:
           params: {repository: tpen-data-bumped}
 
 
-        - task: task-collatex-to-webspace
-
-          config:
-            platform: linux
-            image_resource:
-              type: docker-image
-              source:
-                repository: {{tools-image}}
-                insecure_registries: [ {{insecure-registries}} ]
-
-            inputs:
-              - name: ssh-keys
-              - name: collatex-out-svg
-
-            run:
-              path: sh
-              args:
-                - -exc
-                - |
-                  echo "copy SVG files to webspace for easy access ..."
-
-                  SSH_KEYS_DIR=ssh-keys
-                  /bin/chmod 600 ${SSH_KEYS_DIR}/storage/ci-id_rsa
-
-                  SCP="/usr/bin/scp \
-                      -o StrictHostKeyChecking=no \
-                      -i ${SSH_KEYS_DIR}/storage/ci-id_rsa"
-
-                  $SCP -r collatex-out-svg/ ci@storage.stemmaweb.net:/home/ci/www/moe-data/
-
-                  echo "SVG files copied to webspace, visit https://www.ci.stemmaweb.net/moe-data/"
-
     - name: feed-editions-moe-test
       plan:
         - aggregate:
@@ -369,6 +347,7 @@ jobs:
             trigger: true
             passed: [collate]
           - get: netrc-test-api
+          - get: ssh-keys
 
         - task: task-feed-editions-moe-test
           input_mapping: { tpen-data: tpen-data-collate }
@@ -384,6 +363,8 @@ jobs:
             inputs:
               - name: tpen-data
               - name: netrc-test-api
+            outputs:
+              - name: collatex-out-svg
 
             #
             # real string interpolation is possible starting with concourse 3.2.0 only
@@ -448,7 +429,63 @@ jobs:
                       cat create-section.response
 
                       SECTION_ID=`jq ".parentId" create-section.response | sed s/\"//g`
+
+                      # Export the section dot
+                      # valid dot syntax
+                      echo `date -R` Generating SVG for ${SECTION_NAME}
+                      curl \
+                          --silent \
+                          --output collatex-out-svg/${SECTION_NAME}.dot \
+                          --netrc-file netrc-test-api/dot-netrc-editions.byzantini.st \
+                          --netrc \
+                          --request GET \
+                      ${API_URL}/tradition/${TRADITION_ID}/section/${SECTION_ID}/dot
+                      # Check that it is really dot format, then transform it to SVG
+                      if grep -q ^digraph collatex-out-svg/${SECTION_NAME}.dot
+                      then
+                          dot \
+                              -Tsvg \
+                              collatex-out-svg/${SECTION_NAME}.dot \
+                              > collatex-out-svg/${SECTION_NAME}.svg
+                      else
+                          echo Error in dot output
+                          cat collatex-out-svg/${SECTION_NAME}.dot
+                      fi
                   done
+                  echo Removing dot files
+                  rm collatex-out-svg/*.dot
+
+        - task: task-collatex-to-webspace
+
+          config:
+            platform: linux
+            image_resource:
+              type: docker-image
+              source:
+                repository: {{tools-image}}
+                insecure_registries: [ {{insecure-registries}} ]
+
+            inputs:
+              - name: ssh-keys
+              - name: collatex-out-svg
+
+            run:
+              path: sh
+              args:
+                - -exc
+                - |
+                  echo "export SVG files to webspace for easy access ..."
+
+                  SSH_KEYS_DIR=ssh-keys
+                  /bin/chmod 600 ${SSH_KEYS_DIR}/storage/ci-id_rsa
+
+                  SCP="/usr/bin/scp \
+                      -o StrictHostKeyChecking=no \
+                      -i ${SSH_KEYS_DIR}/storage/ci-id_rsa"
+
+                  $SCP -r collatex-out-svg/ ci@storage.stemmaweb.net:/home/ci/www/moe-data/
+
+                  echo "SVG files copied to webspace, visit https://www.ci.stemmaweb.net/moe-data/"
 
 
     - name: feed-editions-moe
