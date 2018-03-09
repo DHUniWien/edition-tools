@@ -268,18 +268,8 @@ jobs:
                           # json will be beautified later
                           CMD_COLLATE_JSON="java -jar /root/collatex.jar --tokenized --format json $IN_FILE --output $OUT_FILE_JSON"
 
-                          # dot2svg
-                          # CMD_COLLATE_DOT="java -jar /root/collatex.jar --tokenized --format dot $IN_FILE --output $OUT_FILE_DOT"
-                          # CMD_SVG="dot -Grankdir=LR -Tsvg $OUT_FILE_DOT -o $SVG_FILE"
-
                           echo `date -R`: $CMD_COLLATE_JSON
                           $CMD_TIMEOUT $CMD_COLLATE_JSON
-
-                          # echo `date -R`: $CMD_COLLATE_DOT
-                          # $CMD_TIMEOUT $CMD_COLLATE_DOT
-
-                          # echo `date -R`: $CMD_SVG
-                          # $CMD_TIMEOUT $CMD_SVG
                       done
                   '
 
@@ -428,6 +418,13 @@ jobs:
 
                       cat create-section.response
 
+                      # Abort if we start getting gateway errors
+                      if grep -q "50.*Gateway" create-section.response
+                      then
+                          echo Gateway error, bailing out
+                          exit 1
+                      fi
+
                       SECTION_ID=`jq ".parentId" create-section.response | sed s/\"//g`
 
                       # Export the section dot
@@ -443,10 +440,11 @@ jobs:
                       # Check that it is really dot format, then transform it to SVG
                       if grep -q ^digraph collatex-out-svg/${SECTION_NAME}.dot
                       then
-                          dot \
+                          timeout -t 1000 dot \
                               -Tsvg \
                               collatex-out-svg/${SECTION_NAME}.dot \
-                              > collatex-out-svg/${SECTION_NAME}.svg
+                              > collatex-out-svg/${SECTION_NAME}.svg \
+                              || rm -f collatex-out-svg/${SECTION_NAME}.svg
                       else
                           echo Error in dot output
                           cat collatex-out-svg/${SECTION_NAME}.dot
