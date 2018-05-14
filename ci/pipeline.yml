@@ -7,14 +7,12 @@ resources:
       type: git
       source:
         uri: {{tpen-data-uri}}
-        branch: {{tpen-data-branch}}
         private_key: {{DHUniWienMU-priv-key}}
 
     - name: tpen-data-tpen-backup
       type: git
       source:
         uri: {{tpen-data-uri}}
-        branch: {{tpen-data-branch}}
         paths: [transcription]
         ignore_paths: [transcription/tei-xml, collation]
         private_key: {{DHUniWienMU-priv-key}}
@@ -23,7 +21,6 @@ resources:
       type: git
       source:
         uri: {{tpen-data-uri}}
-        branch: {{tpen-data-branch}}
         paths: [transcription/tei-xml]
         private_key: {{DHUniWienMU-priv-key}}
 
@@ -31,7 +28,6 @@ resources:
       type: git
       source:
         uri: {{tpen-data-uri}}
-        branch: {{tpen-data-branch}}
         paths: [collation]
         private_key: {{DHUniWienMU-priv-key}}
 
@@ -41,6 +37,12 @@ resources:
         uri: {{moe-data-uri}}
         branch: {{moe-data-branch}}
         paths: [ci/resources]
+
+    - name: repo-config
+      type: git
+      source:
+        uri: {{repo-config-uri}}
+        private_key: {{DHUniWienMU-priv-key}}
 
     - name: ssh-keys
       type: git
@@ -69,6 +71,7 @@ jobs:
           - get: daily
             trigger: true
           - get: tpen-data-orig
+          - get: repo-config
 
         - task: task-tpen-backup
 
@@ -82,6 +85,7 @@ jobs:
 
             inputs:
               - name: tpen-data-orig
+              - name: repo-config
             outputs:
               - name: do-backup
             run:
@@ -93,6 +97,9 @@ jobs:
                   # repo is in detached-head state...
                   (cd tpen-data-orig && git checkout master)
                   git clone tpen-data-orig do-backup
+                  # Put the relevant backup configuration into place
+                  BACKUPCONFIG=`echo {{tpen-data-uri}} | rev | cut -d / -f 1 | rev`
+                  cp repo-config/${BACKUPCONFIG} /root/tpen/backup.yml
                   /root/tpen/backup.py do-backup
                   git config --global user.name "tools/tpen-backup"
                   git config --global user.email "ci@dh.gesch.univie.ac.at"
@@ -143,12 +150,21 @@ jobs:
                   cd tpen-data-bumped
 
                   ### use merged files
-                  [ -d transcription/merged ] || mkdir transcription/merged/
-                  python3 ../moe-data/ci/resources/merge-json.py transcription/ transcription/merged --verbose
+                  MERGE={{tpen-merge}}
+                  TRANSCRIPTION_DIR=transcription/
+                  if [ "$MERGE" = "yes" ]; then
+                    [ -d transcription/merged ] || mkdir transcription/merged/
+                    python3 ../moe-data/ci/resources/merge-json.py transcription/ transcription/merged --verbose
+                    TRANSCRIPTION_DIR=transcription/merged/
+                  fi
 
                   ### create TEI-XML
+                  JSON2XML_ARGS=
+                  if [ -f transcription/config.py ]; then
+                    JSON2XML_ARGS="-c transcription/config"
+                  fi
                   [ -d transcription/tei-xml ] || mkdir transcription/tei-xml/
-                  python3 ../moe-data/ci/resources/json2xml.py transcription/merged transcription/tei-xml/ -c transcription/config
+                  python3 ../moe-data/ci/resources/json2xml.py $TRANSCRIPTION_DIR transcription/tei-xml/ $JSON2XML_ARGS
 
                   # ### use files as they come from T-PEN
                   # [ -d transcription/tei-xml ] || mkdir transcription/tei-xml/
