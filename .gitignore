@@ -1,5 +1,6 @@
 src/tpen/backup.yml
 src/tpen/backup.log
+src/tpen/command.log
 ci/git-ssh
 ci/pipeline-config.yml
 __pycache__

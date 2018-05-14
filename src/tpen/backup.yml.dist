@@ -24,3 +24,9 @@ uri_user: http://t-pen.org/TPEN/geti?uid=
 # labels of T-PEN projects to exclude from the backup
 # best prepended by a comment about the exception
 blacklist: []
+
+# keep these files in the repository even if they are not on T-PEN
+keeplist: []
+
+# identity_file is used to `ssh -i` properly (via environment variable GIT_SSH_COMMAND)
+identity_file:

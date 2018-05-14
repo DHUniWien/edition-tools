@@ -13,13 +13,6 @@ resources:
         branch: {{tools-branch}}
         paths: [src, ci/resources]
 
-    - name: tools-config-sources
-      type: git
-      source:
-        uri: {{tools-config-sources}}
-        branch: {{tools-config-branch}}
-        private_key: {{DHUniWienMU-priv-key}}
-
     - name: tools-final-image
       type: docker-image
       source:
@@ -91,7 +84,6 @@ jobs:
 
           - get: tools-sources
             trigger: true
-          - get: tools-config-sources
 
         - task: task-test-tpen
 
@@ -105,7 +97,6 @@ jobs:
 
             inputs:
               - name: tools-sources
-              - name: tools-config-sources
 
             outputs:
               - name: artifacts
@@ -116,7 +107,7 @@ jobs:
               args:
                 - -exc
                 - |
-                  cp ../../../tools-config-sources/tpen/backup.yml .
+                  cp backup.yml.dist backup.yml
                   python3 -m unittest discover --start-directory tests/
 
 
@@ -163,8 +154,6 @@ jobs:
           - get: tools-sources
             trigger: true
             passed: [test-tpen]
-
-          - get: tools-config-sources
 
           - get: collatex-sources
             passed: [test-collatex]
@@ -215,7 +204,6 @@ jobs:
             inputs:
               - name: tpen2tei-sources
               - name: tools-sources
-              - name: tools-config-sources
               - name: collatex
 
             outputs:
@@ -232,7 +220,6 @@ jobs:
                   mkdir artifacts/tools/tpen2tei/
                   cp -r tpen2tei-sources artifacts/tools/
                   cp tools-sources/ci/resources/Dockerfile-final artifacts/Dockerfile
-                  cp tools-config-sources/tpen/backup.yml artifacts/tools/tpen/
                   cp collatex/collatex.jar artifacts/tools/collatex.jar
 
         - put: version
