@@ -7,12 +7,14 @@ resources:
       type: git
       source:
         uri: {{tpen-data-uri}}
+        branch: master
         private_key: {{DHUniWienMU-priv-key}}
 
     - name: tpen-data-tpen-backup
       type: git
       source:
         uri: {{tpen-data-uri}}
+        branch: master
         paths: [transcription]
         ignore_paths: [transcription/tei-xml, collation]
         private_key: {{DHUniWienMU-priv-key}}
@@ -21,6 +23,7 @@ resources:
       type: git
       source:
         uri: {{tpen-data-uri}}
+        branch: master
         paths: [transcription/tei-xml]
         private_key: {{DHUniWienMU-priv-key}}
 
@@ -28,6 +31,7 @@ resources:
       type: git
       source:
         uri: {{tpen-data-uri}}
+        branch: master
         paths: [collation]
         private_key: {{DHUniWienMU-priv-key}}
 
@@ -98,8 +102,8 @@ jobs:
                   (cd tpen-data-orig && git checkout master)
                   git clone tpen-data-orig do-backup
                   # Put the relevant backup configuration into place
-                  BACKUPCONFIG=`echo {{tpen-data-uri}} | rev | cut -d / -f 1 | rev`
-                  cp repo-config/${BACKUPCONFIG} /root/tpen/backup.yml
+                  REPO=`echo {{tpen-data-uri}} | rev | cut -d / -f 1 | rev`
+                  cp repo-config/backup-${REPO}.yml /root/tpen/backup.yml
                   /root/tpen/backup.py do-backup
                   git config --global user.name "tools/tpen-backup"
                   git config --global user.email "ci@dh.gesch.univie.ac.at"
