@@ -388,7 +388,9 @@ jobs:
                 - -exc
                 - |
                   # create new user
-                  API_URL="https://api.editions.byzantini.st/ChronicleMETest/stemmarest"
+                  # Use shell variables to avoid double-quoting problem
+                  API_URL={{api-test-base}}
+                  API_USERID={{user-email}}
 
                   curl \
                       --silent \
@@ -396,19 +398,21 @@ jobs:
                       --netrc \
                       --request PUT \
                       --header "Content-Type: application/json" \
-                      --data '{ "role":"admin", "id":"alpha", "email":"alpha@dh.gesch", "passphrase":"user-passphrase" }' \
-                  ${API_URL}/user/alpha
+                      --data '{ "role":{{user-role}}, "id":{{user-email}}, "email":{{user-email}}, "passphrase":{{user-passphrase}} }' \
+                  ${API_URL}/user/${API_USERID}
 
                   # new tradition
+                  TRADITION_NAME={{tradition-name}}
+                  TRADITION_LANG={{tradition-lang}}
                   curl \
                       --silent \
                       --netrc-file netrc-test-api/dot-netrc-editions.byzantini.st \
                       --netrc \
                       --request POST \
-                      --form "name=MatthewEdessa" \
-                      --form "language=armenian" \
+                      --form "name=${TRADITION_NAME}" \
+                      --form "language=${TRADITION_LANG}" \
                       --form "public=no" \
-                      --form "userId=alpha" \
+                      --form "userId=${API_USERID}" \
                       --form "empty=no" \
                   ${API_URL}/tradition > create-tradition.response
 
@@ -541,7 +545,8 @@ jobs:
                 - -exc
                 - |
                   # create new user
-                  API_URL="https://api.editions.byzantini.st/ChronicleME/stemmarest"
+                  API_URL={{api-base}}
+                  API_USERID={{user-email}}
 
                   curl \
                       --silent \
@@ -549,19 +554,21 @@ jobs:
                       --netrc \
                       --request PUT \
                       --header "Content-Type: application/json" \
-                      --data '{ "role":"admin", "id":"alpha", "email":"alpha@dh.gesch", "passphrase":"user-passphrase" }' \
-                  ${API_URL}/user/alpha
+                      --data '{ "role":{{user-role}}, "id":{{user-email}}, "email":{{user-email}}, "passphrase":{{user-passphrase}} }' \
+                  ${API_URL}/user/${API_USERID}
 
                   # new tradition
+                  TRADITION_NAME={{tradition-name}}
+                  TRADITION_LANG={{tradition-lang}}
                   curl \
                       --silent \
                       --netrc-file netrc-test-api/dot-netrc-editions.byzantini.st \
                       --netrc \
                       --request POST \
-                      --form "name=MatthewEdessa" \
-                      --form "language=armenian" \
+                      --form "name=${TRADITION_NAME}" \
+                      --form "language=${TRADITION_LANG}" \
                       --form "public=no" \
-                      --form "userId=alpha" \
+                      --form "userId=${API_USERID}" \
                       --form "empty=no" \
                   ${API_URL}/tradition > create-tradition.response
 
