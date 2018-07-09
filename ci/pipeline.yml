@@ -48,11 +48,16 @@ resources:
         uri: {{repo-config-uri}}
         private_key: {{DHUniWienMU-priv-key}}
 
-    - name: ssh-keys
-      type: git
-      source:
-        uri: {{ssh-keys-uri}}
-        private_key: {{DHUniWienMU-priv-key}}
+    #  2018.07.09, according to tla:    
+    #  The CI pipelines moe-data and aghvesagirk have a job (feed-editions-moe-test) with a dependency on the ssh-keys resource. 
+    #  The key used to be used to SCP a set of image files to the storage server, but that step is no longer done, 
+    #  so the resource should no longer be part of the pipeline:
+    #
+    # - name: ssh-keys
+    #   type: git
+    #   source:
+    #     uri: {{ssh-keys-uri}}
+    #     private_key: {{DHUniWienMU-priv-key}}
 
     - name: netrc-test-api
       type: git
@@ -357,7 +362,12 @@ jobs:
             trigger: true
             passed: [collate]
           - get: netrc-test-api
-          - get: ssh-keys
+          #  2018.07.09, according to tla:    
+          #  The CI pipelines moe-data and aghvesagirk have a job (feed-editions-moe-test) with a dependency on the ssh-keys resource. 
+          #  The key used to be used to SCP a set of image files to the storage server, but that step is no longer done, 
+          #  so the resource should no longer be part of the pipeline:
+          #
+          #- get: ssh-keys
 
         - task: task-feed-editions-moe-test
           input_mapping: { tpen-data: tpen-data-collate }
