@@ -56,7 +56,7 @@ resources:
     # - name: ssh-keys
     #   type: git
     #   source:
-    #     uri: {{ssh-keys-uri}}
+    #     uri: ssh-keys-uri # double curly braces removed to avoid variable submission which happens even in comment
     #     private_key: {{DHUniWienMU-priv-key}}
 
     - name: netrc-test-api
