@@ -30,6 +30,15 @@ def normalise(configmod):
     return None
 
 
+def punctuation(configmod):
+    """Returns a list of punctuation characters that should be treated as
+    separate tokens, or none"""
+    if configmod is not None:
+        pct = getattr(configmod, "punctuation", None)
+        return pct()
+    return None
+
+
 def unfinished(configmod):
     """Returns a list of manuscripts that aren't to be collated yet"""
     if configmod is not None:
@@ -66,7 +75,7 @@ def teixml2collatex(milestone, indir, verbose, configmod):
                 print('skipping unfinished witness %s' % witness_name)
             continue
 
-        witness = extract_witness(indir + '/' + infile, milestone, normalise(configmod))
+        witness = extract_witness(indir + '/' + infile, milestone, normalise(configmod), punctuation(configmod))
 
         if witness is not None and witness.get('tokens'):
             witnesses.append(witness)
@@ -75,7 +84,7 @@ def teixml2collatex(milestone, indir, verbose, configmod):
                 infile,
             ))
             # Get the layer witness too
-            layerwit = extract_witness(indir + '/' + infile, milestone, normalise(configmod), True)
+            layerwit = extract_witness(indir + '/' + infile, milestone, normalise(configmod), punctuation(configmod), True)
             if layerwit.get('tokens'):
                 layerwit['id'] += " (a.c.)"
                 witnesses.append(layerwit)
@@ -111,13 +120,14 @@ def teixml2collatex(milestone, indir, verbose, configmod):
     return collation
 
 
-def extract_witness (xmlfile, milestone, normalisation, first_layer=False):
+def extract_witness (xmlfile, milestone, normalisation, punctuation=None, first_layer=False):
     """ returns json
     """
 
     tokenizer = Tokenizer(
         milestone=milestone,
         normalisation=normalisation,
+        punctuation=punctuation,
         first_layer=first_layer,
         id_xpath='//t:msDesc/@xml:id')
 
