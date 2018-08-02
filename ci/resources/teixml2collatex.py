@@ -2,7 +2,6 @@ import logging
 import os
 import fnmatch
 import sys
-import pprint
 import argparse
 import json
 import re
@@ -35,7 +34,8 @@ def punctuation(configmod):
     separate tokens, or none"""
     if configmod is not None:
         pct = getattr(configmod, "punctuation", None)
-        return pct()
+        if pct is not None:
+            return pct()
     return None
 
 
@@ -48,50 +48,65 @@ def unfinished(configmod):
     return []
 
 
+def txn_priority(configmod):
+    """Returns an ordered list of file extensions that should be used for finding
+    transcription data"""
+    if configmod is not None:
+        pri = getattr(configmod, "txn_priority", None)
+        if pri is not None:
+            return pri()
+    return ['json.tei', 'txt.tei']
+
+
 def teixml2collatex(milestone, indir, verbose, configmod):
-    # list elements are already so
-    # that collatex can digest them
-    witnesses = []
+    # Set up a dictionary of witness sigil -> witness data. There needs to be
+    # only one dataset per sigil.
+    witnesses = dict()
     skipwit = unfinished(configmod)
 
-    # walk through all available witnesses
-    # and look for the current milestone
-    #
-    # presume: one witness per file
+    # Walk through all available witnesses and look for the current milestone
     mslength = []
     missing = []
-    for infile in fnmatch.filter (os.listdir (indir), '*tei.xml'):
+    for infile in get_filelist(indir, configmod):
         if verbose:
-            print ("{}: milestone {} in file: {}".format (
-                datetime.datetime.now().strftime ("%a, %d %b %Y %H:%M:%S %z"),
+            print("{}: milestone {} in file: {}".format(
+                datetime.datetime.now().strftime("%a, %d %b %Y %H:%M:%S %z"),
                 milestone,
                 infile,
             ))
 
         # get a witness name for display by removing file extensions
-        witness_name = re.sub ('-merged', '', infile[:infile.find('.')])
+        witness_name = re.sub('-merged', '', infile[:infile.find('.')])
         if witness_name in skipwit:
             if verbose:
                 print('skipping unfinished witness %s' % witness_name)
             continue
 
-        witness = extract_witness(indir + '/' + infile, milestone, normalise(configmod), punctuation(configmod))
+        witness = extract_witness(
+            indir + '/' + infile,
+            milestone,
+            normalise(configmod),
+            punctuation(configmod))
 
         if witness is not None and witness.get('tokens'):
-            witnesses.append(witness)
-            logging.info ('milestone <%s> found in witness file <%s>' % (
+            witnesses[witness.get('id')] = witness
+            logging.info('milestone <%s> found in witness file <%s>' % (
                 milestone,
                 infile,
             ))
             # Get the layer witness too
-            layerwit = extract_witness(indir + '/' + infile, milestone, normalise(configmod), punctuation(configmod), True)
+            layerwit = extract_witness(indir + '/' + infile,
+                                       milestone,
+                                       normalise(configmod),
+                                       punctuation(configmod),
+                                       True)
             if layerwit.get('tokens'):
                 layerwit['id'] += " (a.c.)"
-                witnesses.append(layerwit)
+                witnesses[layerwit.get('id')] = layerwit
             # Note the length of the (main) witness
             mslength.append(len(witness.get('tokens')))
         else:
-            logging.info ('milestone <%s> not found in witness file <%s>' % (
+            logging.info('milestone <%s> not found in witness file <%s>' % (
                 milestone,
                 infile,
             ))
@@ -100,29 +115,38 @@ def teixml2collatex(milestone, indir, verbose, configmod):
     # warn and exclude if one of the witnesses seems weirdly longer than
     # the others; it probably indicates a missing milestone marker and can
     # cause SVG generation to hang.
+    msmedian = 0
     if mslength:
         msmedian = statistics.median(mslength)
     collation = {"witnesses": []}
-    for wit in witnesses:
-        if len(wit.get('tokens')) > msmedian + 800:
-            print("Witness %s seems too long; excluding it from collation" % wit.get('id'),
-                    file=sys.stderr)
+    for sigil, witdata in witnesses.items():
+        if len(witdata.get('tokens')) > msmedian + 800:
+            print("Witness %s seems too long; excluding it from collation" % sigil,
+                  file=sys.stderr)
         else:
-            collation.get("witnesses").append(wit)
+            collation.get("witnesses").append(witdata)
 
     # note on output which files are missing milestones
     if verbose and len(missing) > 0:
-        print ("{}: milestone {} not in witnesses: {}".format (
-            datetime.datetime.now().strftime ("%a, %d %b %Y %H:%M:%S %z"),
+        print("{}: milestone {} not in witnesses: {}".format(
+            datetime.datetime.now().strftime("%a, %d %b %Y %H:%M:%S %z"),
             milestone,
-            ' '.join (missing),
+            ' '.join(missing),
         ))
     return collation
 
 
-def extract_witness (xmlfile, milestone, normalisation, punctuation=None, first_layer=False):
-    """ returns json
-    """
+def get_filelist(indir, configmod):
+    priority = txn_priority(configmod)
+    ordered_list = []
+    for extension in reversed(priority):
+        for infile in fnmatch.filter(os.listdir(indir), '*%s.xml' % extension):
+            ordered_list.append(infile)
+    return ordered_list
+
+
+def extract_witness(xmlfile, milestone, normalisation, punctuation=None, first_layer=False):
+    """ Return a JSON-tokenized witness milestone"""
 
     tokenizer = Tokenizer(
         milestone=milestone,
@@ -132,44 +156,44 @@ def extract_witness (xmlfile, milestone, normalisation, punctuation=None, first_
         id_xpath='//t:msDesc/@xml:id')
 
     try:
-        with open (xmlfile, encoding = 'utf-8') as fh:
-            return tokenizer.from_string (fh.read())
+        with open(xmlfile, encoding='utf-8') as fh:
+            return tokenizer.from_fh(fh)
     except FileNotFoundError:
         print('file not found: %s' % xmlfile, file=sys.stderr)
     except:
         print('Caught Python exception trying to tokenise %s; see log' % xmlfile, file=sys.stderr)
-        logging.info ('exception type: %s' % sys.exc_info()[0])
-        logging.info ('exception value: %s' % sys.exc_info()[1])
-        logging.info ('exception trace: %s' % sys.exc_info()[2])
+        logging.info('exception type: %s' % sys.exc_info()[0])
+        logging.info('exception value: %s' % sys.exc_info()[1])
+        logging.info('exception trace: %s' % sys.exc_info()[2])
 
 
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
-    parser.add_argument (
+    parser.add_argument(
          "indir",
-         help = "input directory t-pen output files",
+         help="input directory t-pen output files",
     )
-    parser.add_argument (
+    parser.add_argument(
         "outdir",
-        help = "output directory",
+        help="output directory",
     )
-    parser.add_argument (
+    parser.add_argument(
         "-v",
         "--verbose",
-        action = "store_true",
-        help = "make output more verbose",
+        action="store_true",
+        help="make output more verbose",
     )
-    parser.add_argument (
+    parser.add_argument(
         "-c",
         "--config",
-        help = "module for custom collation logic"
+        help="module for custom collation logic"
     )
 
-    logging.basicConfig (
-        format = '%(asctime)s %(message)s',
-        filename = '%s.log' % os.path.basename (sys.argv[0]),
-        level = logging.NOTSET,
+    logging.basicConfig(
+        format='%(asctime)s %(message)s',
+        filename='%s.log' % os.path.basename(sys.argv[0]),
+        level=logging.NOTSET,
     )
 
     args = parser.parse_args()
@@ -182,14 +206,14 @@ if __name__ == '__main__':
 
     for milestone in milestones(configmod):
         c = teixml2collatex(milestone, args.indir, args.verbose, configmod)
-        if c.get ('witnesses'):
+        if c.get('witnesses'):
             outfile = '%s/milestone-%s.json' % (args.outdir, milestone)
 
-            with open (outfile, 'w', encoding='utf-8') as fh:
-                json.dump (
+            with open(outfile, 'w', encoding='utf-8') as fh:
+                json.dump(
                     c,
                     fh,
-                    ensure_ascii = False,
-                    indent = 4,
-                    check_circular = True,
+                    ensure_ascii=False,
+                    indent=4,
+                    check_circular=True,
                 )
