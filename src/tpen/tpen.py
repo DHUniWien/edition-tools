@@ -332,7 +332,7 @@ class TPen (object):
                 logging.error ("Exception: %s" % sys.exc_info()[0])
                 res and log_res (res)
             else:
-                request_ok = res.ok()
+                request_ok = True
 
             finally:
                 tries += 1
