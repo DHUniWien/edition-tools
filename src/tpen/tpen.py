@@ -310,7 +310,7 @@ class TPen (object):
                             cookies = self.cookies,
                             timeout = self.timeout,
                         )
-
+                    res.raise_for_status()
                 elif verb == 'get':
                     # XXX it is no genius idea to keep this in a rather generic _request()
                     headers = dict (Accept = 'application/ld+json;charset=UTF-8')
@@ -321,6 +321,7 @@ class TPen (object):
                         cookies = self.cookies,
                         timeout = self.timeout,
                     )
+                    res.raise_for_status()
                 else:
                     raise UserWarning ('invalid verb')
 
@@ -331,7 +332,7 @@ class TPen (object):
                 logging.error ("Exception: %s" % sys.exc_info()[0])
                 res and log_res (res)
             else:
-                request_ok = True
+                request_ok = res.ok()
 
             finally:
                 tries += 1
