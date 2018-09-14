@@ -8,6 +8,7 @@ import re
 import importlib
 import statistics
 import datetime
+import traceback
 
 from tpen2tei.wordtokenize import Tokenizer
 
@@ -162,9 +163,7 @@ def extract_witness(xmlfile, milestone, normalisation, punctuation=None, first_l
         print('file not found: %s' % xmlfile, file=sys.stderr)
     except:
         print('Caught Python exception trying to tokenise %s; see log' % xmlfile, file=sys.stderr)
-        logging.info('exception type: %s' % sys.exc_info()[0])
-        logging.info('exception value: %s' % sys.exc_info()[1])
-        logging.info('exception trace: %s' % sys.exc_info()[2])
+        logging.info(traceback.print_exc(sys.exc_info()))
 
 
 if __name__ == '__main__':
