@@ -24,7 +24,6 @@ def metadata(configmod):
         return md
     return None
 
-
 def special_chars(configmod):
     """Return a dict of non-Unicode glyphs that may occur in the manuscript"""
     if configmod is not None:
@@ -42,7 +41,7 @@ def numeric_parser(configmod):
         return np
     return None
 
-    
+
 def transcription_filter(configmod):
     """Return a function that filters a line of transcription before XMLification"""
     if configmod is not None:
@@ -52,36 +51,54 @@ def transcription_filter(configmod):
     return None
 
 
+def postprocess(configmod):
+    """Return a function that modifies the finished TEI product"""
+    if configmod is not None:
+        config = importlib.import_module(configmod)
+        pp = getattr(config, "postprocess", None)
+        return pp
+    return None
+
+
 def json2xml(indir, outdir,
              metadata=None,
              special_chars=None,
              numeric_parser=None,
              text_filter=None,
-             write_stdout_stderr=False):
+             postprocess=None):
     """ json2xml assumes all files in indir to be T-PEN output
         and tries to convert them to TEI-XML in outdir"""
 
+    # Find the members file, if it exists in indir
+    transcriptions = []
+    members=None
     for infile in fnmatch.filter(os.listdir(indir), '*json'):
+        if infile == 'members.json':
+            with open(os.path.join(indir, infile), encoding="utf-8") as mj:
+                members = json.load(mj)
+        else:
+            transcriptions.append(infile)
+
+    # Now go through the transcription files
+    for infile in transcriptions:
         outfile = infile + '.tei.xml'
-
-        if write_stdout_stderr:
-            sys.stdout = open(outdir + '/' + infile + '.stdout', 'w')
-            sys.stderr = open(outdir + '/' + infile + '.stderr', 'w')
-
+        
         with open(indir + '/' + infile, 'r') as fh:
             data = json.load(fh)
 
             try:
-                logging.error('starting on file <%s>' % infile)
+                logging.info('starting on file <%s>' % infile)
 
                 tei = from_sc(
                     data,
                     # from_sc will modify the supplied param metadata
                     # which would stick without deepcopy'ing every turn
                     metadata=copy.deepcopy(metadata),
+                    members=members,
                     special_chars=special_chars,
                     numeric_parser=numeric_parser,
-                    text_filter=text_filter
+                    text_filter=text_filter,
+                    postprocess=postprocess
                 )
 
                 # just ignore tei==None
@@ -93,7 +110,7 @@ def json2xml(indir, outdir,
                         xml_declaration=True
                     )
 
-                    logging.error('file <%s> looks good' % infile)
+                    logging.info('file <%s> looks good' % infile)
                 else:
                     logging.error('error with file <%s>: tpen2tei.parse.from_sc did not return anything' % infile)
 
@@ -113,10 +130,10 @@ if __name__ == '__main__':
         help="output directory",
     )
     parser.add_argument(
-        "-w",
-        "--write_stdout_stderr",
+        "-v",
+        "--verbose",
         action="store_true",
-        help="write stdout and stderr to separate files in outdir",
+        help="turn on more verbose logging",
     )
     parser.add_argument(
         "-c",
@@ -125,6 +142,8 @@ if __name__ == '__main__':
     )
 
     args = parser.parse_args()
+    if args.verbose:
+        logging.basicConfig(level=logging.INFO)
 
     configmod = None
     if args.config is not None:
@@ -133,9 +152,9 @@ if __name__ == '__main__':
         configmod = os.path.basename(configpath)
 
     json2xml(args.indir, args.outdir,
-             write_stdout_stderr=args.write_stdout_stderr,
              metadata=metadata(configmod),                 # wants a dict or None
              special_chars=special_chars(configmod),       # wants a dict or None
              numeric_parser=numeric_parser(configmod),     # wants a function or None
-             text_filter=transcription_filter(configmod)   # wants a function or None
+             text_filter=transcription_filter(configmod),  # wants a function or None
+             postprocess=postprocess(configmod)            # wants a function or None
              )
