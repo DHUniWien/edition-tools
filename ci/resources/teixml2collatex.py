@@ -154,6 +154,7 @@ def extract_witness(xmlfile, milestone, normalisation, punctuation=None, first_l
         normalisation=normalisation,
         punctuation=punctuation,
         first_layer=first_layer,
+        block_xpath='//t:text/t:body/t:p | //t:text/t:body/t:ab',
         id_xpath='//t:msDesc/@xml:id')
 
     try:
@@ -188,6 +189,12 @@ if __name__ == '__main__':
         "--config",
         help="module for custom collation logic"
     )
+    parser.add_argument(
+        "-m",
+        "--milestone",
+        action="append",
+        help="milestone(s) to process, if not default"
+    )
 
     logging.basicConfig(
         format='%(asctime)s %(message)s',
@@ -203,7 +210,11 @@ if __name__ == '__main__':
         sys.path.append(os.path.dirname(configpath))
         configmod = importlib.import_module(os.path.basename(configpath))
 
-    for milestone in milestones(configmod):
+    mslist = args.milestone
+    if mslist is None:
+        mslist = milestones(configmod)
+
+    for milestone in mslist:
         c = teixml2collatex(milestone, args.indir, args.verbose, configmod)
         if c.get('witnesses'):
             outfile = '%s/milestone-%s.json' % (args.outdir, milestone)
