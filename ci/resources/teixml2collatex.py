@@ -164,7 +164,7 @@ def extract_witness(xmlfile, milestone, normalisation, punctuation=None, first_l
         print('file not found: %s' % xmlfile, file=sys.stderr)
     except:
         print('Caught Python exception trying to tokenise %s; see log' % xmlfile, file=sys.stderr)
-        logging.info(traceback.print_exc(sys.exc_info()))
+        logging.info(traceback.print_exc())
 
 
 if __name__ == '__main__':
