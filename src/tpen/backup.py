@@ -16,7 +16,7 @@ from command import run
 def get_config():
     ourpath = os.path.abspath(os.path.dirname(__file__))
     with open ('%s/backup.yml' % ourpath, 'r') as ymlfile:
-        return yaml.load (ymlfile)
+        return yaml.load(ymlfile, Loader=yaml.FullLoader)
 
 
 def setup (config):
