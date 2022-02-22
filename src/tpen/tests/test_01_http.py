@@ -14,7 +14,7 @@ class TestHTTP (unittest.TestCase):
 
     def setUp (self):
         with open (CONFIG_FILE, 'r') as ymlfile:
-            self.cfg = yaml.load (ymlfile)
+            self.cfg = yaml.load (ymlfile, Loader=yaml.FullLoader)
 
     def test_login_ok (self):
         login_success = 'document.location = "index.jsp";'
