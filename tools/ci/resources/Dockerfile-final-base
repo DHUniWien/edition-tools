@@ -1,0 +1,95 @@
+FROM alpine
+LABEL vendor=DHUniWien
+
+RUN apk update \
+ && apk upgrade \
+ && apk add --no-cache \
+    python3 \
+    py-lxml \
+    py-yaml \
+    py-requests \
+    openjdk8-jre \
+    git \
+    openssh \
+    libxml2-utils \
+    curl \
+    jq \
+    graphviz \
+    tzdata \
+    # BEGIN Text::Tradition
+    make \
+    gcc \
+    wget \
+    perl \
+    perl-xml-libxml \
+    perl-dev \
+    libc-dev \
+    perl-text-csv \
+    perl-spreadsheet-parseexcel \
+    perl-ipc-run \
+    perl-moose \
+    perl-test-warn \
+    perl-data-dump \
+    perl-algorithm-diff \
+    perl-graph \
+    perl-file-which \
+    perl-devel-stacktrace \
+    perl-json \
+    perl-list-allutils \
+    perl-moose \
+    perl-file-which \
+    perl-xml-libxml \
+    perl-test-warn \
+    perl-sub-uplevel \
+    perl-graph \
+    perl-module-build-tiny \
+    perl-extutils-helpers \
+    perl-extutils-config \
+    perl-extutils-installpaths \
+    perl-extutils-depends \
+    perl-namespace-autoclean \
+    perl-moo \
+    perl-class-method-modifiers \
+    perl-role-tiny \
+    perl-test-nowarnings \
+    perl-archive-zip \
+    perl-algorithm-diff \
+    perl-ipc-run \
+    perl-data-dump \
+    perl-json-maybexs \
+    perl-cpanel-json-xs \
+    perl-timedate \
+    perl-datetime \
+    perl-datetime-locale \
+    perl-datetime-timezone \
+    perl-test-needs \
+    perl-specio \
+    perl-importer \
+    perl-exception-class \
+    perl-class-data-inheritable \
+    perl-test-without-module \
+    perl-test2-plugin-nowarnings \
+    perl-ipc-run3 \
+    perl-class-singleton \
+    perl-file-sharedir \
+    perl-file-copy-recursive \
+    perl-scope-guard \
+    perl-path-tiny \
+    perl-test-differences \
+    perl-test-exception \
+    perl-scope-upper \
+    perl-carp-clan \
+    perl-test-deep \
+    perl-file-remove \
+    perl-clone
+    # END Text::Tradition
+
+RUN wget https://cpanmin.us -O cpanm && \
+    perl cpanm Devel::OverloadInfo Text::Tradition
+
+# timezone Europe/Vienna
+RUN cp /usr/share/zoneinfo/Europe/Vienna /etc/localtime && \
+    echo "Europe/Vienna" > /etc/timezone && \
+    apk del tzdata
+
+RUN pip3 install bs4

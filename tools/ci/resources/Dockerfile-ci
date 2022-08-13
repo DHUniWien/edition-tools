@@ -1,0 +1,14 @@
+FROM alpine
+LABEL vendor=DHUniWien
+
+RUN apk update \
+ && apk upgrade \
+ && apk add \
+    python3 \
+    py-lxml \
+    py-yaml \
+    openssh
+
+RUN pip3 install \
+    requests-mock \
+    bs4

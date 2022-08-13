@@ -1,0 +1,8 @@
+# example configuration of ssh for tools accessing github
+#
+
+Host github.com
+  HostName github.com
+  User git
+  IdentityFile <location of ssh key>
+  IdentitiesOnly yes

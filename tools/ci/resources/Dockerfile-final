@@ -1,0 +1,7 @@
+FROM registry:5000/tools-final-base
+WORKDIR /root
+COPY tools/ /root/
+
+RUN cd /root/tpen2tei-sources && \
+    python3 setup.py install && \
+    rm -rf /root/tpen2tei-sources

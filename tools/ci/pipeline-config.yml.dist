@@ -1,0 +1,21 @@
+tpen2tei-sources:
+tpen2tei-branch: master
+
+tools-sources:
+tools-branch: master
+
+tools-config-sources:
+tools-config-branch: master
+
+insecure-registries:
+tools-ci-image:
+tools-final-image:
+tools-final-base-image:
+
+version-uri:
+version-branch: master
+version-file: ci/version
+
+collatex-sources:
+collatex-ci-image:
+maven-config-uri:
