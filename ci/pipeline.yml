@@ -6,64 +6,35 @@ resources:
     - name: tpen-data-orig
       type: git
       source:
-        uri: {{tpen-data-uri}}
+        uri: ((tpen-data-uri))
         branch: master
-        private_key: {{DHUniWienMU-priv-key}}
+        private_key: ((DHOpsMU-priv-key))
 
     - name: tpen-data-tpen-backup
       type: git
       source:
-        uri: {{tpen-data-uri}}
+        uri: ((tpen-data-uri))
         branch: master
         paths: [transcription]
-        ignore_paths: [transcription/tei-xml, collation]
-        private_key: {{DHUniWienMU-priv-key}}
+        ignore_paths: [transcription/tei-xml]
+        private_key: ((DHOpsMU-priv-key))
 
     - name: tpen-data-tpen2tei
       type: git
       source:
-        uri: {{tpen-data-uri}}
+        uri: ((tpen-data-uri))
         branch: master
         paths: [transcription/tei-xml]
-        private_key: {{DHUniWienMU-priv-key}}
+        private_key: ((DHOpsMU-priv-key))
 
-    - name: tpen-data-collate
-      type: git
-      source:
-        uri: {{tpen-data-uri}}
-        branch: master
-        paths: [collation]
-        private_key: {{DHUniWienMU-priv-key}}
-
-    - name: moe-data
-      type: git
-      source:
-        uri: {{moe-data-uri}}
-        branch: {{moe-data-branch}}
-        paths: [ci/resources]
-
+    # This includes the tpen backup configuration, as well as the necessary
+    # .netrc file for feeding stemmarest at the end.
     - name: repo-config
       type: git
       source:
-        uri: {{repo-config-uri}}
-        private_key: {{DHUniWienMU-priv-key}}
-
-    #  2018.07.09, according to tla:    
-    #  The CI pipelines moe-data and aghvesagirk have a job (feed-editions-moe-test) with a dependency on the ssh-keys resource. 
-    #  The key used to be used to SCP a set of image files to the storage server, but that step is no longer done, 
-    #  so the resource should no longer be part of the pipeline:
-    #
-    # - name: ssh-keys
-    #   type: git
-    #   source:
-    #     uri: ssh-keys-uri # double curly braces removed to avoid variable submission which happens even in comment
-    #     private_key: {{DHUniWienMU-priv-key}}
-
-    - name: netrc-test-api
-      type: git
-      source:
-        uri: {{netrc-test-api-uri}}
-        private_key: {{DHUniWienMU-priv-key}}
+        uri: ((repo-config-uri))
+        paths: [((repo-config-path))]
+        private_key: ((DHOpsMU-priv-key))
 
     - name: daily
       type: time
@@ -76,22 +47,20 @@ jobs:
 
     - name: tpen-backup
       plan:
-        - aggregate:
+        - in_parallel:
           - get: daily
             trigger: true
           - get: tpen-data-orig
+            params: {depth: 1}
           - get: repo-config
 
         - task: task-tpen-backup
-
           config:
             platform: linux
-            image_resource:
-              type: docker-image
+            image_resource: 
+              type: registry-image
               source:
-                repository: {{tools-image}}
-                insecure_registries: [ {{insecure-registries}} ]
-
+                repository: chrysaphi/edition-tools
             inputs:
               - name: tpen-data-orig
               - name: repo-config
@@ -105,10 +74,11 @@ jobs:
                   # NO IDEA why this is necessary, but otherwise the source
                   # repo is in detached-head state...
                   (cd tpen-data-orig && git checkout master)
+
                   git clone tpen-data-orig do-backup
                   # Put the relevant backup configuration into place
-                  REPO=`echo {{tpen-data-uri}} | rev | cut -d / -f 1 | rev`
-                  cp repo-config/backup-${REPO}.yml /root/tpen/backup.yml
+                  REPO=`echo ((tpen-data-uri)) | rev | cut -d / -f 1 | rev`
+                  cp repo-config/${REPO}-ci/backup.yml /root/tpen/backup.yml
                   /root/tpen/backup.py do-backup
                   git config --global user.name "tools/tpen-backup"
                   git config --global user.email "ci@dh.gesch.univie.ac.at"
@@ -120,32 +90,28 @@ jobs:
                   fi
 
         - put: tpen-data-tpen-backup
+          get_params: {depth: 1}
           params:
             repository: do-backup
 
-    - name: tpen2tei
+    - name: json-tei-transform
       plan:
-        - aggregate:
+        - in_parallel:
           - get: tpen-data-tpen-backup
+            params: {depth: 1}
             trigger: true
             passed: [tpen-backup]
-          - get: moe-data
 
         - task: task-tpen2tei
-
           config:
             platform: linux
-            image_resource:
-              type: docker-image
+            image_resource: 
+              type: registry-image
               source:
-                repository: {{tools-image}}
-                insecure_registries: [ {{insecure-registries}} ]
-
+                repository: chrysaphi/edition-tools
             inputs:
-              - name: moe-data
               - name: tpen-data-tpen-backup
             outputs:
-              - name: tei-xml
               - name: tpen-data-bumped
 
             run:
@@ -159,11 +125,14 @@ jobs:
                   cd tpen-data-bumped
 
                   ### use merged files
-                  MERGE={{tpen-merge}}
+                  MERGE=((tpen-merge))
                   TRANSCRIPTION_DIR=transcription/
                   if [ "$MERGE" = "yes" ]; then
                     [ -d transcription/merged ] || mkdir transcription/merged/
-                    python3 ../moe-data/ci/resources/merge-json.py transcription/ transcription/merged --verbose
+                    python3 /root/scripts/merge-json.py transcription/ transcription/merged --verbose
+                    if [ -f transcription/members.json ]; then
+                      cp transcription/members.json transcription/merged
+                    fi
                     TRANSCRIPTION_DIR=transcription/merged/
                   fi
 
@@ -173,14 +142,10 @@ jobs:
                     JSON2XML_ARGS="-c transcription/config"
                   fi
                   [ -d transcription/tei-xml ] || mkdir transcription/tei-xml/
-                  python3 ../moe-data/ci/resources/json2xml.py $TRANSCRIPTION_DIR transcription/tei-xml/ $JSON2XML_ARGS
-
-                  # ### use files as they come from T-PEN
-                  # [ -d transcription/tei-xml ] || mkdir transcription/tei-xml/
-                  # python3 ../moe-data/ci/resources/json2xml.py transcription/ transcription/tei-xml/
+                  python3 /root/scripts/json2xml.py -v $TRANSCRIPTION_DIR transcription/tei-xml/ $JSON2XML_ARGS
 
                   git config --global user.email "ci@dh.gesch.univie.ac.at"
-                  git config --global user.name "moe-data/tpen2tei"
+                  git config --global user.name "edition-tools/tpen2tei"
 
                   cd transcription/tei-xml/
                   git add *xml
@@ -193,25 +158,24 @@ jobs:
                   fi
 
         - put: tpen-data-tpen2tei
+          get_params: {depth: 1}
           params: {repository: tpen-data-bumped}
 
     - name: validate-tei-xml
       plan:
         - get: tpen-data-tpen2tei
+          params: {depth: 1}
           trigger: true
-          passed: [tpen2tei]
+          passed: [json-tei-transform]
 
         - task: task-validate-tei-xml
           input_mapping: { tpen-data: tpen-data-tpen2tei }
-
           config:
             platform: linux
-            image_resource:
-              type: docker-image
+            image_resource: 
+              type: registry-image
               source:
-                repository: {{tools-image}}
-                insecure_registries: [ {{insecure-registries}} ]
-
+                repository: chrysaphi/edition-tools
             inputs:
               - name: tpen-data
 
@@ -221,393 +185,165 @@ jobs:
                 - -exc
                 - |
                   SAVEIFS=$IFS
-                  IFS=$(echo -en "\n\b")
-
+                  IFS=$(echo -n "\n\b")
                   # for now: don't care if a linter fails instead make sure
                   # all files are checked by swallowing the return value
                   #
                   sh -c '
-                      for FILE in tpen-data/transcription/tei-xml/*xml
-                      do
-                          # xmlwf "$FILE" && \
-                          xmllint --noout --relaxng "{{relaxng_schema}}" "$FILE"
-                      done
-                      exit 0
+                    ENFORCE=((enforce-validity))
+                    verr=0
+                    for FILE in tpen-data/transcription/tei-xml/*xml
+                    do
+                      echo === ${FILE##*/} ===
+                      xmllint --noout --relaxng "((relaxng_schema))" "$FILE"
+                      ret=$?
+                      verr=$((verr + ret))
+                    done
+                    if [ $verr -ne 0 ]; then
+                      echo "Some files failed to validate"
+                    fi
+                    if [ $ENFORCE = "yes" ]; then
+                      exit $verr
+                    fi
+                    exit 0
                   '
-
                   IFS=$SAVEIFS
-                  exit 0
 
     - name: collate
       plan:
-        - aggregate:
+        - in_parallel:
           - get: tpen-data-tpen2tei
+            params: {depth: 1}
             trigger: true
             passed: [validate-tei-xml]
-          - get: moe-data
+          - get: repo-config
 
-        - task: task-collate
-          input_mapping: { tpen-data: tpen-data-tpen2tei }
-
+        - task: task-tokenize
+          input_mapping: { repo-data: tpen-data-tpen2tei }
           config:
-            platform: linux
-            image_resource:
-              type: docker-image
+            image_resource: 
+              type: registry-image
               source:
-                repository: {{tools-image}}
-                insecure_registries: [ {{insecure-registries}} ]
-
+                repository: chrysaphi/edition-tools
+            platform: linux
             inputs:
-              - name: tpen-data
-              - name: moe-data
+              - name: repo-data
             outputs:
-              - name: collatex
-              - name: collatex-out
-              - name: collatex-out-svg
-              - name: collatex-out-pretty
+              - name: tokenfiles
 
             run:
               path: sh
               args:
                 - -exc
                 - |
-                  echo "rearrange data for collatex ..."
-                  python3 moe-data/ci/resources/teixml2collatex.py tpen-data/transcription/tei-xml/ collatex -c tpen-data/transcription/config --verbose
+                  echo "tokenize readings for CollateX ..."
+                  # Generate tokens for each milestone
+                  python3 /root/scripts/teixml2collatex.py repo-data/transcription/tei-xml/ tokenfiles -c repo-data/transcription/config --verbose
 
-                  SAVEIFS=$IFS
-                  IFS=$(echo -en "\n\b")
+        - task: task-collate-and-upload
+          config:
+            platform: linux
+            image_resource: 
+              type: registry-image
+              source:
+                repository: chrysaphi/edition-tools
+            inputs:
+              - name: tokenfiles
+              - name: repo-config
+            outputs:
+              - name: collations
 
-                  echo "running collatex ..."
-                  sh -c '
-                      for IN_FILE in collatex/milestone-*.json
+            run:
+              path: sh
+              args:
+                - -exc
+                - |
+                  # PUT new user on test server
+                  curl \
+                      --silent \
+                      --netrc-file repo-config/netrc/dot-netrc-editions.byzantini.st \
+                      --netrc \
+                      --request PUT \
+                      --header "Content-Type: application/json" \
+                      --data '{ "role":"((user-role))", "id":"((user-email))", "email":"((user-email))", "passphrase":"((user-passphrase))"}' \
+                  ((api-test-base))/user/((user-email))
+                  if [ $? -ne 0 ]; then
+                      exit $?
+                  fi
+
+                  # Make the new empty tradition
+                  curl \
+                      --silent \
+                      --netrc-file repo-config/netrc/dot-netrc-editions.byzantini.st \
+                      --netrc \
+                      --request POST \
+                      --form "name=((tradition-name)) $(date "+%Y-%m-%d")" \
+                      --form "language=((tradition-lang))" \
+                      --form "public=no" \
+                      --form "userId=((user-email))" \
+                      --form "empty=no" \
+                  ((api-test-base))/tradition > create-tradition.response
+                  TRADITION_ID=`jq ".tradId" create-tradition.response | sed s/\"//g`
+                  if [ -z $TRADITION_ID ]; then
+                      exit 1
+                  fi
+                  export TRADITION_ID
+
+                  SECTION_ID=''
+
+                  # SAVEIFS=$IFS
+                  # IFS=$(echo -en "\n\b")
+
+                  # Go through each milestone, collate it, and upload it
+                  echo "Collating and uploading milestones ..."
+                  bash -c '
+                      for IN_FILE in tokenfiles/milestone-*.json
                       do
                           NAME=${IN_FILE##*/}  # strip directory
                           NAME=${NAME%.*}      # strip file ext.
 
-                          OUT_FILE_JSON=collatex-out/$NAME.json
-                          # OUT_FILE_DOT=collatex-out/$NAME.dot
-                          # SVG_FILE=collatex-out-svg/$NAME.svg
+                          OUT_FILE_JSON=collations/$NAME.json
+                          CMD_TIMEOUT="timeout 1000 "
 
-                          CMD_TIMEOUT="timeout -t 1000 "
-
-                          # json will be beautified later
+                          # run the collation
                           CMD_COLLATE_JSON="java -jar /root/collatex.jar --tokenized --format json $IN_FILE --output $OUT_FILE_JSON"
 
                           echo `date -R`: $CMD_COLLATE_JSON
-                          $CMD_TIMEOUT $CMD_COLLATE_JSON
+                          # $CMD_TIMEOUT $CMD_COLLATE_JSON
+                          $CMD_COLLATE_JSON
+
+                          # upload it to the server
+                          SECTION_ID_PREV=${SECTION_ID}
+                          SECTION_ID=''
+
+                          CMD_CURL="curl --silent --netrc-file repo-config/netrc/dot-netrc-editions.byzantini.st --netrc --request POST"
+                          CMD_CURL="${CMD_CURL} --form name=${NAME}"
+                          CMD_CURL="${CMD_CURL} --form file=@${OUT_FILE_JSON}"
+                          CMD_CURL="${CMD_CURL} --form filetype=cxjson"
+                          CMD_CURL="${CMD_CURL} https://api.editions.byzantini.st/ChronicleMETest/stemmarest/tradition/${TRADITION_ID}/section"
+                          echo $CMD_CURL
+
+                          # Abort if we get five gateway errors in a row
+                          SUCCESS=
+                          for ((i=1; i < 6; i++)); do
+                              echo -n "`date -R`: Attempt $i: "
+                              $CMD_CURL > create-section.response
+                              if grep -q "50.*Gateway" create-section.response
+                              then
+                                  echo Gateway error $i/3
+                              else
+                                  cat create-section.response; echo
+                                  SUCCESS=true
+                                  break
+                              fi
+                          done
+                          if [ -z $SUCCESS ]
+                          then
+                              echo "Too many gateway errors in a row; bailing out"
+                              exit 1
+                          fi
+
+                          SECTION_ID=`jq ".parentId" create-section.response | sed s/\"//g`
                       done
                   '
-
-                  echo `date -R` done
-
-                  echo "pretty print collatex's output ..."
-                  python3 moe-data/ci/resources/beautify-json.py collatex-out/ collatex-out-pretty/
-
-                  echo `date -R` done
-
-                  IFS=$SAVEIFS
-
-        - task: task-collatex-to-github
-          input_mapping: { tpen-data: tpen-data-tpen2tei }
-
-          config:
-            platform: linux
-            image_resource:
-              type: docker-image
-              source:
-                repository: {{tools-image}}
-                insecure_registries: [ {{insecure-registries}} ]
-
-            inputs:
-              - name: tpen-data
-              - name: collatex-out
-            outputs:
-              - name: tpen-data-bumped
-
-            run:
-              path: sh
-              args:
-                - -exc
-                - |
-                  echo "push output of collatex (json) to github ..."
-
-                  (cd tpen-data && git checkout master)
-                  git clone tpen-data tpen-data-bumped
-                  [ -d tpen-data-bumped/collation ] || mkdir tpen-data-bumped/collation/
-
-                  cp -r collatex-out/*json tpen-data-bumped/collation
-
-                  git config --global user.email "ci@dh.gesch.univie.ac.at"
-                  git config --global user.name "moe-data/collate"
-
-                  cd tpen-data-bumped/collation/
-                  git add *json
-
-                  GIT_STATUS=`git status`
-
-                  if echo $GIT_STATUS | grep -q "Changes to be committed:" -;
-                  then
-                      git commit -m "add output of collatex" *json
-                  fi
-
-
-        - put: tpen-data-collate
-          params: {repository: tpen-data-bumped}
-
-
-    - name: feed-editions-moe-test
-      plan:
-        - aggregate:
-          - get: tpen-data-collate
-            trigger: true
-            passed: [collate]
-          - get: netrc-test-api
-          #  2018.07.09, according to tla:    
-          #  The CI pipelines moe-data and aghvesagirk have a job (feed-editions-moe-test) with a dependency on the ssh-keys resource. 
-          #  The key used to be used to SCP a set of image files to the storage server, but that step is no longer done, 
-          #  so the resource should no longer be part of the pipeline:
-          #
-          #- get: ssh-keys
-
-        - task: task-feed-editions-moe-test
-          input_mapping: { tpen-data: tpen-data-collate }
-
-          config:
-            platform: linux
-            image_resource:
-              type: docker-image
-              source:
-                repository: {{tools-image}}
-                insecure_registries: [ {{insecure-registries}} ]
-
-            inputs:
-              - name: tpen-data
-              - name: netrc-test-api
-            outputs:
-              - name: collatex-out-svg
-
-            #
-            # real string interpolation is possible starting with concourse 3.2.0 only
-            # {{}} puts the inserted string in quotes
-            # starting with 3.2.0 there is the alternative (()) which doesn't
-            # therefore values mentioned in pipeline-config.yml.dist are not yet used here
-            #
-            run:
-              path: sh
-              args:
-                - -exc
-                - |
-                  # create new user
-                  # Use shell variables to avoid double-quoting problem
-                  API_URL={{api-test-base}}
-                  API_USERID={{user-email}}
-
-                  curl \
-                      --silent \
-                      --netrc-file netrc-test-api/dot-netrc-editions.byzantini.st \
-                      --netrc \
-                      --request PUT \
-                      --header "Content-Type: application/json" \
-                      --data '{ "role":{{user-role}}, "id":{{user-email}}, "email":{{user-email}}, "passphrase":{{user-passphrase}} }' \
-                  ${API_URL}/user/${API_USERID}
-
-                  # new tradition
-                  TRADITION_NAME={{tradition-name}}
-                  TRADITION_LANG={{tradition-lang}}
-                  curl \
-                      --silent \
-                      --netrc-file netrc-test-api/dot-netrc-editions.byzantini.st \
-                      --netrc \
-                      --request POST \
-                      --form "name=${TRADITION_NAME} $(date "+%Y-%m-%d")" \
-                      --form "language=${TRADITION_LANG}" \
-                      --form "public=no" \
-                      --form "userId=${API_USERID}" \
-                      --form "empty=no" \
-                  ${API_URL}/tradition > create-tradition.response
-
-
-                  TRADITION_ID=`jq ".tradId" create-tradition.response | sed s/\"//g`
-
-                  SECTION_ID=''
-
-                  # add milestones (sections) to the new tradition
-                  for IN_FILE in tpen-data/collation/milestone-*.json
-                  do
-                      FILE_NAME=${IN_FILE##*/milestone-}  # strip directory
-                      SECTION_NAME=${FILE_NAME%.*}      # strip file ext.
-
-                      SECTION_ID_PREV=${SECTION_ID}
-                      SECTION_ID=''
-
-                      curl \
-                          --silent \
-                          --netrc-file netrc-test-api/dot-netrc-editions.byzantini.st \
-                          --netrc \
-                          --request POST \
-                          --form "name=${SECTION_NAME}" \
-                          --form "file=@${IN_FILE}" \
-                          --form "filetype=cxjson" \
-                      ${API_URL}/tradition/${TRADITION_ID}/section > create-section.response
-
-                      cat create-section.response
-
-                      # Abort if we start getting gateway errors
-                      if grep -q "50.*Gateway" create-section.response
-                      then
-                          echo Gateway error, bailing out
-                          exit 1
-                      fi
-
-                      SECTION_ID=`jq ".parentId" create-section.response | sed s/\"//g`
-
-                      # Export the section dot
-                      # valid dot syntax
-                      # echo `date -R` Generating SVG for ${SECTION_NAME}
-                      # curl \
-                      #     --silent \
-                      #     --output collatex-out-svg/${SECTION_NAME}.dot \
-                      #     --netrc-file netrc-test-api/dot-netrc-editions.byzantini.st \
-                      #     --netrc \
-                      #     --request GET \
-                      # ${API_URL}/tradition/${TRADITION_ID}/section/${SECTION_ID}/dot
-                      # # Check that it is really dot format, then transform it to SVG
-                      # if grep -q ^digraph collatex-out-svg/${SECTION_NAME}.dot
-                      # then
-                      #     timeout -t 1000 dot \
-                      #         -Tsvg \
-                      #         collatex-out-svg/${SECTION_NAME}.dot \
-                      #         > collatex-out-svg/${SECTION_NAME}.svg \
-                      #         || rm -f collatex-out-svg/${SECTION_NAME}.svg
-                      # else
-                      #     echo Error in dot output
-                      #     cat collatex-out-svg/${SECTION_NAME}.dot
-                      # fi
-                  done
-                  # echo Removing dot files
-                  # rm collatex-out-svg/*.dot
-
-        # - task: task-collatex-to-webspace
-
-        #   config:
-        #     platform: linux
-        #     image_resource:
-        #       type: docker-image
-        #       source:
-        #         repository: {{tools-image}}
-        #         insecure_registries: [ {{insecure-registries}} ]
-
-        #     inputs:
-        #       - name: ssh-keys
-        #       - name: collatex-out-svg
-
-        #     run:
-        #       path: sh
-        #       args:
-        #         - -exc
-        #         - |
-        #           echo "export SVG files to webspace for easy access ..."
-
-        #           SSH_KEYS_DIR=ssh-keys
-        #           /bin/chmod 600 ${SSH_KEYS_DIR}/storage/ci-id_rsa
-
-        #           SCP="/usr/bin/scp \
-        #               -o StrictHostKeyChecking=no \
-        #               -i ${SSH_KEYS_DIR}/storage/ci-id_rsa"
-
-        #           $SCP -r collatex-out-svg/ ci@storage.stemmaweb.net:/home/ci/www/moe-data/
-
-        #           echo "SVG files copied to webspace, visit https://www.ci.stemmaweb.net/moe-data/"
-
-
-    - name: feed-editions-moe
-      plan:
-        - aggregate:
-          - get: tpen-data-collate
-            # passed: [create-editions-moe-stemmarest]
-            passed: [collate]
-          - get: netrc-test-api
-
-        - task: task-feed-editions-moe
-          input_mapping: { tpen-data: tpen-data-collate }
-
-          config:
-            platform: linux
-            image_resource:
-              type: docker-image
-              source:
-                repository: {{tools-image}}
-                insecure_registries: [ {{insecure-registries}} ]
-
-            inputs:
-              - name: tpen-data
-              - name: netrc-test-api
-
-            #
-            # real string interpolation is possible starting with concourse 3.2.0 only
-            # {{}} puts the inserted string in quotes
-            # starting with 3.2.0 there is the alternative (()) which doesn't
-            # therefore values mentioned in pipeline-config.yml.dist are not yet used here
-            #
-            run:
-              path: sh
-              args:
-                - -exc
-                - |
-                  # create new user
-                  API_URL={{api-base}}
-                  API_USERID={{user-email}}
-
-                  curl \
-                      --silent \
-                      --netrc-file netrc-test-api/dot-netrc-editions.byzantini.st \
-                      --netrc \
-                      --request PUT \
-                      --header "Content-Type: application/json" \
-                      --data '{ "role":{{user-role}}, "id":{{user-email}}, "email":{{user-email}}, "passphrase":{{user-passphrase}} }' \
-                  ${API_URL}/user/${API_USERID}
-
-                  # new tradition
-                  TRADITION_NAME={{tradition-name}}
-                  TRADITION_LANG={{tradition-lang}}
-                  curl \
-                      --silent \
-                      --netrc-file netrc-test-api/dot-netrc-editions.byzantini.st \
-                      --netrc \
-                      --request POST \
-                      --form "name=${TRADITION_NAME}" \
-                      --form "language=${TRADITION_LANG}" \
-                      --form "public=no" \
-                      --form "userId=${API_USERID}" \
-                      --form "empty=no" \
-                  ${API_URL}/tradition > create-tradition.response
-
-
-                  TRADITION_ID=`jq ".tradId" create-tradition.response | sed s/\"//g`
-
-                  SECTION_ID=''
-
-                  # add milestones (sections) to the new tradition
-                  for IN_FILE in tpen-data/collation/milestone-*.json
-                  do
-                      FILE_NAME=${IN_FILE##*/}  # strip directory
-                      SECTION_NAME=${FILE_NAME%.*}      # strip file ext.
-
-                      SECTION_ID_PREV=${SECTION_ID}
-                      SECTION_ID=''
-
-                      curl \
-                          --silent \
-                          --netrc-file netrc-test-api/dot-netrc-editions.byzantini.st \
-                          --netrc \
-                          --request POST \
-                          --form "name=${SECTION_NAME}" \
-                          --form "file=@${IN_FILE}" \
-                          --form "filetype=cxjson" \
-                      ${API_URL}/tradition/${TRADITION_ID}/section > create-section.response
-
-                      cat create-section.response
-
-                      SECTION_ID=`jq ".parentId" create-section.response | sed s/\"//g`
-
-                  done
+                  # IFS=$SAVEIFS

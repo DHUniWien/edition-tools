@@ -1,31 +1,20 @@
-tpen-data-uri:
-tpen-data-branch:
+tpen-data-uri: 
 
-tpen2tei-uri:
-tpen2tei-branch:
+repo-config-uri: 
+repo-config-path: 
 
-moe-data-uri:
-moe-data-branch:
+# for the backup step
+tpen-merge: "yes"
 
-insecure-registries: "<ip of registry>:5000"
-tools-image: <ip of registry>:5000/tools-final
+# for the validation step
+enforce-validity: "yes"
+relaxng_schema: .../tei_all.rng
 
-version-uri:
-version-branch:
-version-file: ci/version
-
-ssh-keys-uri:
-netrc-test-api-uri:
-
-relaxng_schema: http://www.tei-c.org/release/xml/tei/custom/schema/relaxng/tei_all.rng
-
-stemmarest-sources-uri:
-stemmarest-sources-branch:
-stemmarest-config-uri:
-
-# api-base:
-# user-name:
-# user-email:
-# user-passphrase:
-# tradition-name:
-# trandition-lang:
+# for the feed step
+api-base: https://api.editions.byzantini.st/ChronicleME/stemmarest
+api-test-base: https://api.editions.byzantini.st/ChronicleMETest/stemmarest
+user-email: 
+user-passphrase: 
+user-role: 
+tradition-name: 
+tradition-lang: 
