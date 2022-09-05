@@ -1,12 +1,10 @@
 #!/usr/bin/env python3
 
 import yaml
-import tempfile
 import os
 import re
 import sys
 import logging
-import datetime
 import json
 
 from tpen import TPen
@@ -20,14 +18,19 @@ def get_config():
 
 
 def setup (config):
+    # Set up the logging here
+    logargs = {
+        'format': '%(asctime)s %(message)s',
+        'level': config.get('loglevel', 'INFO')
+    }
+    if 'logfile' in config:
+        logargs['filename'] = config.get('logfile')
+    else:
+        logargs['stream'] = sys.stdout
+    logging.basicConfig (**logargs)
+
+    # Initialize the TPen object
     tpen = TPen (cfg = config)
-
-    logging.basicConfig (
-        format = '%(asctime)s %(message)s',
-        stream = sys.stdout,
-        level = config.get ('loglevel'),
-    )
-
     return tpen
 
 def backup (**kwa):

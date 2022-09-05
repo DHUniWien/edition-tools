@@ -6,7 +6,6 @@ from bs4 import BeautifulSoup
 import pprint
 import sys
 import time
-import random
 
 pp = pprint.PrettyPrinter (indent = 4)
 
@@ -51,12 +50,6 @@ class TPen (object):
             login_md5               = 0,
             login_text              = 0,
             # impossible_chars        = 0,
-        )
-
-        logging.basicConfig (
-            format = '%(asctime)s %(message)s',
-            filename = cfg.get ('logfile'),
-            level = cfg.get ('loglevel'),
         )
 
         #

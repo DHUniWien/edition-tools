@@ -214,6 +214,10 @@ if __name__ == '__main__':
     if mslist is None:
         mslist = milestones(configmod)
 
+    # Make sure the output directory exists
+    if not os.path.exists(args.outdir):
+        os.makedirs(args.outdir)
+
     for milestone in mslist:
         c = teixml2collatex(milestone, args.indir, args.verbose, configmod)
         if c.get('witnesses'):
