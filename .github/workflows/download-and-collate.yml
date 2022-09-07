@@ -101,7 +101,7 @@ jobs:
         run: |
           echo Run conditional evalutes to ${{ needs.create-tei-files.outputs.filesChanged || inputs.forceCollate }}
           verr=0
-          if [ ${{ needs.create-tei-files.outputs.filesChanged || inputs.forceCollate }} -eq true ]; then
+          if [ ${{ needs.create-tei-files.outputs.filesChanged || inputs.forceCollate }} = true ]; then
             # don't stop if a linter fails, instead make sure
             # all files are checked by swallowing the return value
             #
@@ -129,14 +129,14 @@ jobs:
         run: |
           # Workaround for broken conditional in validation step
           echo Hack conditional evaluates to ${{ needs.validate-tei-xml.outputs.hackContinue }}
-          if [ ${{ needs.validate-tei-xml.outputs.hackContinue }} -ne true ]; then
+          if [ ${{ needs.validate-tei-xml.outputs.hackContinue }} = false ]; then
             exit 0
           fi
           python3 /root/scripts/teixml2collatex.py transcription/tei-xml/ tokenfiles -c transcription/config --verbose
       - name: Collate section by section
         run: |
           # Workaround for broken conditional in validation step
-          if [ ${{ needs.validate-tei-xml.outputs.hackContinue }} -ne true ]; then
+          if [ ${{ needs.validate-tei-xml.outputs.hackContinue }} = false ]; then
             exit 0
           fi
           # Construct the base curl command depending on whether we have an API user/password
