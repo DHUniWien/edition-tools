@@ -1,0 +1,124 @@
+name: Tokenise and collate sections
+on:
+  workflow_call:
+    inputs:
+      stemmaweb_user:
+        required: true
+        type: string
+      api_test_base:
+        required: true
+        type: string
+      tradition_name:
+        required: true
+        type: string
+      tradition_lang:
+        required: true
+        type: string
+    secrets:
+      API_HTUSER:
+        required: false
+      API_HTPASS:
+        required: false
+      SW_PASS:
+        required: true
+
+jobs:
+  # Tokenize by section, run the collation, and upload the result.
+  collate-and-upload:
+    runs-on: [self-hosted, Linux]
+    container:
+      image: ghcr.io/dhuniwien/edition-tools
+    steps:
+      - uses: actions/checkout@v3
+      - name: Tokenize all sections
+        run: python3 /root/scripts/teixml2collatex.py transcription/tei-xml/ tokenfiles -c transcription/config --verbose
+      - name: Collate section by section
+        run: |
+          # Construct the base curl command depending on whether we have an API user/password
+          CURLCMD='curl --silent'
+          if [ -n ${{ secrets.API_HTUSER }} ]; then
+            CURLCMD="${CURLCMD} --user ${{ secrets.API_HTUSER }}"
+            if [ -n ${{ secrets.API_HTPASS }} ]; then
+              CURLCMD="${CURLCMD}:${{ secrets.API_HTPASS }}"
+            fi
+          fi
+          # PUT new user on test server
+          $CURLCMD \
+              --request PUT \
+              --header "Content-Type: application/json" \
+              --data '{ "role":"user", "id":"${{inputs.stemmaweb_user}}", "email":"${{inputs.stemmaweb_user}}", "passphrase":"${{secrets.SW_PASS}}"}' \
+          ${{inputs.api_test_base}}/user/${{inputs.stemmaweb_user}}
+          if [ $? -ne 0 ]; then
+              exit $?
+          fi
+
+          # Make the new empty tradition
+          $CURLCMD \
+              --request POST \
+              --form "name=${{inputs.tradition_name}} $(date "+%Y-%m-%d")" \
+              --form "language=${{inputs.tradition_lang}}" \
+              --form "public=no" \
+              --form "userId=${{inputs.stemmaweb_user}}" \
+              --form "empty=no" \
+          $API_TEST_BASE/tradition > create-tradition.response
+          TRADITION_ID=`jq ".tradId" create-tradition.response | sed s/\"//g`
+          if [ -z $TRADITION_ID ]; then
+              exit 1
+          fi
+          export TRADITION_ID
+
+          SECTION_ID=''
+
+          # Go through each milestone, collate it, and upload it
+          echo "Collating and uploading milestones ..."
+          if [ ! -e collations ]; then
+              mkdir collations
+          fi
+          for IN_FILE in tokenfiles/milestone-*.json
+          do
+              NAME=${IN_FILE##*/}  # strip directory
+              NAME=${NAME%.*}      # strip file ext.
+
+              OUT_FILE_JSON=collations/$NAME.json
+              CMD_TIMEOUT="timeout 1000 "
+
+              # run the collation
+              CMD_COLLATE_JSON="java -jar /root/collatex.jar --tokenized --format json $IN_FILE --output $OUT_FILE_JSON"
+
+              echo `date -R`: $CMD_COLLATE_JSON
+              # $CMD_TIMEOUT $CMD_COLLATE_JSON
+              $CMD_COLLATE_JSON
+
+              # upload it to the server
+              SECTION_ID_PREV=${SECTION_ID}
+              SECTION_ID=''
+
+              CMD_CURL="$CURLCMD --request POST"
+              CMD_CURL="${CMD_CURL} --form name=${NAME}"
+              CMD_CURL="${CMD_CURL} --form file=@${OUT_FILE_JSON}"
+              CMD_CURL="${CMD_CURL} --form filetype=cxjson"
+              CMD_CURL="${CMD_CURL} ${{inputs.api_test_base}}/tradition/${TRADITION_ID}/section"
+              echo $CMD_CURL
+
+              # Abort if we get five gateway errors in a row
+              SUCCESS=
+              for i in {1..5}; do
+                  echo -n "`date -R`: Attempt $i: "
+                  $CMD_CURL > create-section.response
+                  if grep -q "50.*Gateway" create-section.response
+                  then
+                      echo Gateway error $i/5
+                  else
+                      cat create-section.response; echo
+                      SUCCESS=true
+                      break
+                  fi
+              done
+              if [ -z $SUCCESS ]
+              then
+                  echo "Too many gateway errors in a row; bailing out"
+                  exit 1
+              fi
+
+              SECTION_ID=`jq ".parentId" create-section.response | sed s/\"//g`
+          done
