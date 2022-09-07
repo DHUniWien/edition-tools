@@ -23,5 +23,4 @@ RUN pip install \
 WORKDIR /root
 COPY tools/src/tpen tpen
 COPY tools/collatex.jar .
-RUN mkdir moe-data
 COPY scripts scripts
