@@ -88,7 +88,7 @@ jobs:
 
   validate-tei-xml:
     needs: create-tei-files
-    if: needs.create-tei-files.outputs.filesChanged || inputs.forceCollate
+    if: ${{ needs.create-tei-files.outputs.filesChanged || inputs.forceCollate }}
     runs-on: [self-hosted, Linux]
     container:
       image: ghcr.io/dhuniwien/edition-tools
