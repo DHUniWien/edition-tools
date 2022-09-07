@@ -87,7 +87,8 @@ jobs:
         message: 'Daily T-PEN backup automagick'
 
   validate-tei-xml:
-    if: needs.tpen-backup.outputs.filesChanged || inputs.forceCollate
+    needs: create-tei-files
+    if: needs.create-tei-files.outputs.filesChanged || inputs.forceCollate
     runs-on: [self-hosted, Linux]
     container:
       image: ghcr.io/dhuniwien/edition-tools
