@@ -9,6 +9,10 @@ on:
         required: true
       TPEN_PASS:
         required: true
+    outputs:
+      filesChanged:
+        description: "Set to true if a change to the transcription file was committed"
+        value: ${{ jobs.create-tei-files.outputs.filesChanged }}
 
 jobs:
   create-tei-files:
