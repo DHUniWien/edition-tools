@@ -93,28 +93,31 @@ jobs:
     container:
       image: ghcr.io/dhuniwien/edition-tools
     continue-on-error: ${{ !inputs.blockOnValidation }}
+    outputs:
+      hackContinue: ${{ needs.create-tei-files.outputs.filesChanged || inputs.forceCollate }}
     steps: 
       - uses: actions/checkout@v3
       - name: Validate committed XML files
         run: |
-          # A little light debugging
-          echo Files changed is ${{ needs.create-tei-files.outputs.filesChanged }}
-          # don't stop if a linter fails, instead make sure
-          # all files are checked by swallowing the return value
-          #
+          echo Run conditional evalutes to ${{ needs.create-tei-files.outputs.filesChanged || inputs.forceCollate }}
           verr=0
-          for FILE in transcription/tei-xml/*.xml
-          do
-            echo === $FILE ===
-            xmllint --noout --relaxng ${{ inputs.xml_schema }} "$FILE"
-            ret=$?
-            verr=$((verr + ret))
-          done
-          if [ $verr -ne 0 ]; then
-            echo "Some files failed to validate"
+          if [ ${{ needs.create-tei-files.outputs.filesChanged || inputs.forceCollate }} -eq true ]; then
+            # don't stop if a linter fails, instead make sure
+            # all files are checked by swallowing the return value
+            #
+            for FILE in transcription/tei-xml/*.xml
+            do
+              echo === $FILE ===
+              xmllint --noout --relaxng ${{ inputs.xml_schema }} "$FILE"
+              ret=$?
+              verr=$((verr + ret))
+            done
+            if [ $verr -ne 0 ]; then
+              echo "Some files failed to validate"
+            fi
           fi
           exit $verr
-
+            
   collate-and-upload:
     runs-on: [self-hosted, Linux]
     container:
@@ -126,6 +129,10 @@ jobs:
         run: python3 /root/scripts/teixml2collatex.py transcription/tei-xml/ tokenfiles -c transcription/config --verbose
       - name: Collate section by section
         run: |
+          # Workaround for broken conditional in validation step
+          if [ ${{ needs.validate-tei-xml.outputs.hackContinue }} -ne true ]; then
+            exit 0
+          fi
           # Construct the base curl command depending on whether we have an API user/password
           CURLCMD='curl --silent'
           if [ -n ${{ secrets.API_HTUSER }} ]; then
