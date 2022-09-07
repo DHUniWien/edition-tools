@@ -97,6 +97,8 @@ jobs:
       - uses: actions/checkout@v3
       - name: Validate committed XML files
         run: |
+          # A little light debugging
+          echo Files changed is ${{ needs.create-tei-files.outputs.filesChanged }}
           # don't stop if a linter fails, instead make sure
           # all files are checked by swallowing the return value
           #
