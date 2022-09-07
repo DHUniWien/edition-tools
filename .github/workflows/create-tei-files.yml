@@ -1,0 +1,51 @@
+# Do the T-PEN backup and TEI transformation into the repository. 
+# Return an output that says whether a commit happened.
+
+name: T-PEN download and TEI conversion
+on:
+  workflow_call:
+    secrets:
+      TPEN_USER:
+        required: true
+      TPEN_PASS:
+        required: true
+
+jobs:
+  create-tei-files:
+    runs-on: [self-hosted, Linux]
+    container:
+      image: ghcr.io/dhuniwien/edition-tools
+    # We want to know whether any relevant Github files changed as a result of this job
+    outputs:
+      filesChanged: ${{ steps.commitstep.outputs.committed }}
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+    - name: Checkout the repo
+      uses: actions/checkout@v3
+    - name: Fetch files from T-PEN
+      run: |
+        # Get the config file and add secrets
+        sed -e 's/TPENUSER/${{ secrets.TPEN_USER }}/' -e 's/TPENPASS/${{ secrets.TPEN_PASS }}/' backup.yml > /root/tpen/backup.yml
+        /root/tpen/backup.py .
+    - name: Convert from SC-JSON to TEI XML format
+      run: |
+        [ -d transcription/merged ] || mkdir transcription/merged
+        python3 /root/scripts/merge-json.py transcription/ transcription/merged --verbose
+        if [ -f transcription/members.json ]; then
+          cp transcription/members.json transcription/merged
+        fi
+        JSON2XML_ARGS=
+        if [ -f transcription/config.py ]; then
+          JSON2XML_ARGS="-c transcription/config"
+        fi
+        [ -d transcription/tei-xml ] || mkdir transcription/tei-xml
+        python3 /root/scripts/json2xml.py -v transcription/merged transcription/tei-xml $JSON2XML_ARGS 
+        ret=$?
+        rm -rf transcription/merged
+        exit $ret
+    - name: Commit and push all updates
+      id: commitstep
+      uses: EndBug/add-and-commit@v9
+      with:
+        add: 'transcription/*.json transcription/tei-xml/*.xml'
+        message: 'Daily T-PEN backup automagick'

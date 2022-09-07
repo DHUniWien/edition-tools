@@ -11,7 +11,7 @@ jobs:
   validate-tei-xml:
     runs-on: [self-hosted, Linux]
     container:
-      image: ghcr.io/dhuniwien/edition-tools:master
+      image: ghcr.io/dhuniwien/edition-tools
     steps: 
       - uses: actions/checkout@v3
       - name: Validate committed XML files
