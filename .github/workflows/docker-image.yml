@@ -6,6 +6,7 @@ on:
       - 'scripts/**'
       - 'tools/**'
       - 'Dockerfile'
+      - '.github/workflows/docker-image.yml'
 
 env:
   REGISTRY: ghcr.io
