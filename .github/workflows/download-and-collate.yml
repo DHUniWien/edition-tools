@@ -98,6 +98,7 @@ jobs:
     steps: 
       - uses: actions/checkout@v3
       - name: Validate committed XML files
+        if: ${{ needs.create-tei-files.outputs.filesChanged || inputs.forceCollate }}
         run: |
           echo Run conditional evalutes to ${{ needs.create-tei-files.outputs.filesChanged || inputs.forceCollate }}
           verr=0
