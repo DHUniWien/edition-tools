@@ -126,7 +126,13 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - name: Tokenize all sections
-        run: python3 /root/scripts/teixml2collatex.py transcription/tei-xml/ tokenfiles -c transcription/config --verbose
+        run: |
+          # Workaround for broken conditional in validation step
+          echo Hack conditional evaluates to ${{ needs.validate-tei-xml.outputs.hackContinue }}
+          if [ ${{ needs.validate-tei-xml.outputs.hackContinue }} -ne true ]; then
+            exit 0
+          fi
+          python3 /root/scripts/teixml2collatex.py transcription/tei-xml/ tokenfiles -c transcription/config --verbose
       - name: Collate section by section
         run: |
           # Workaround for broken conditional in validation step
