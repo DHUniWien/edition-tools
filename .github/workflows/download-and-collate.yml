@@ -133,6 +133,7 @@ jobs:
           if [ ${{ needs.validate-tei-xml.outputs.hackContinue }} = false ]; then
             exit 0
           fi
+          rm -rf tokenfiles && mkdir tokenfiles  # Make sure cruft is cleared out
           python3 /root/scripts/teixml2collatex.py transcription/tei-xml/ tokenfiles -c transcription/config --verbose
       - name: Collate section by section
         run: |
@@ -177,9 +178,7 @@ jobs:
 
           # Go through each milestone, collate it, and upload it
           echo "Collating and uploading milestones ..."
-          if [ ! -e collations ]; then
-              mkdir collations
-          fi
+          rm -rf collations && mkdir collations  # Make sure cruft is cleared out
           for IN_FILE in tokenfiles/milestone-*.json
           do
               NAME=${IN_FILE##*/}  # strip directory
