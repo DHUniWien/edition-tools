@@ -129,8 +129,9 @@ jobs:
       - name: Tokenize all sections
         run: |
           # Workaround for broken conditional in validation step
-          echo Hack conditional evaluates to ${{ needs.validate-tei-xml.outputs.hackContinue }}
           if [ ${{ needs.validate-tei-xml.outputs.hackContinue }} = false ]; then
+            echo Hack conditional evaluates to ${{ needs.validate-tei-xml.outputs.hackContinue }}
+            echo Skipping tokenisation
             exit 0
           fi
           rm -rf tokenfiles && mkdir tokenfiles  # Make sure cruft is cleared out
@@ -139,6 +140,7 @@ jobs:
         run: |
           # Workaround for broken conditional in validation step
           if [ ${{ needs.validate-tei-xml.outputs.hackContinue }} = false ]; then
+            echo Skipping collation
             exit 0
           fi
           # Construct the base curl command depending on whether we have an API user/password
@@ -227,3 +229,12 @@ jobs:
 
               SECTION_ID=`jq ".parentId" create-section.response | sed s/\"//g`
           done
+          
+          # Zip up the results for upload
+          (cd collations && tar -czvf results.tgz *.json)
+          
+      - name: Upload collation result
+        uses: actions/upload-artifact@v3
+        with: 
+          name: collation-result.tgz
+          path: collations/results.tgz
