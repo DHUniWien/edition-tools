@@ -88,21 +88,21 @@ jobs:
 
   validate-tei-xml:
     needs: create-tei-files
-    if: ${{ needs.create-tei-files.outputs.filesChanged || inputs.forceCollate }}
+    if: needs.create-tei-files.outputs.filesChanged or inputs.forceCollate
     runs-on: [self-hosted, Linux]
     container:
       image: ghcr.io/dhuniwien/edition-tools
     continue-on-error: ${{ !inputs.blockOnValidation }}
     outputs:
-      hackContinue: ${{ needs.create-tei-files.outputs.filesChanged || inputs.forceCollate }}
+      hackContinue: ${{ needs.create-tei-files.outputs.filesChanged or inputs.forceCollate }}
     steps: 
       - uses: actions/checkout@v3
       - name: Validate committed XML files
         if: ${{ needs.create-tei-files.outputs.filesChanged || inputs.forceCollate }}
         run: |
-          echo Run conditional evalutes to ${{ needs.create-tei-files.outputs.filesChanged || inputs.forceCollate }}
+          echo Run conditional evalutes to ${{ inputs.forceCollate or needs.create-tei-files.outputs.filesChanged }}
           verr=0
-          if [ ${{ needs.create-tei-files.outputs.filesChanged || inputs.forceCollate }} = true ]; then
+          if [ ${{ inputs.forceCollate or needs.create-tei-files.outputs.filesChanged }} = true ]; then
             # don't stop if a linter fails, instead make sure
             # all files are checked by swallowing the return value
             #
