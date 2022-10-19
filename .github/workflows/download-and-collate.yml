@@ -88,11 +88,11 @@ jobs:
 
   validate-tei-xml:
     needs: create-tei-files
-    if: (needs.create-tei-files.outputs.filesChanged == 'true') || (inputs.forceCollate == 'true')
+    if: (needs.create-tei-files.outputs.filesChanged == true) || (inputs.forceCollate == true)
     runs-on: [self-hosted, Linux]
     container:
       image: ghcr.io/dhuniwien/edition-tools
-    continue-on-error: ${{ !inputs.blockOnValidation }}
+    continue-on-error: ${{ inputs.blockOnValidation }}
     steps: 
       - uses: actions/checkout@v3
       - name: Validate committed XML files
