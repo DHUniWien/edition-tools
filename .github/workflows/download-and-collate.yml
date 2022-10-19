@@ -102,7 +102,7 @@ jobs:
         run: |
           echo Run conditional evalutes to ${{ inputs.forceCollate || needs.create-tei-files.outputs.filesChanged }}
           verr=0
-          if [ ${{ inputs.forceCollate or needs.create-tei-files.outputs.filesChanged }} = true ]; then
+          if [ ${{ inputs.forceCollate || needs.create-tei-files.outputs.filesChanged }} = true ]; then
             # don't stop if a linter fails, instead make sure
             # all files are checked by swallowing the return value
             #
