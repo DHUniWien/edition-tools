@@ -51,9 +51,10 @@ jobs:
     runs-on: [self-hosted, Linux]
     container:
       image: ghcr.io/dhuniwien/edition-tools
-    # We want to know whether any relevant Github files changed as a result of this job
+    # We want to know whether any relevant Github files changed as a result of this job.
+    # We are also avoiding 'or' statements because something is wrong with the logic.
     outputs:
-      filesChanged: ${{ steps.commitstep.outputs.committed }}
+      runFullCollation: ${{ !(steps.commitstep.outputs.committed == false && inputs.forceCollate == false) }}
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
     - name: Checkout the repo
@@ -88,11 +89,11 @@ jobs:
 
   validate-tei-xml:
     needs: create-tei-files
-    if: (needs.create-tei-files.outputs.filesChanged == true) || (inputs.forceCollate == true)
+    if: needs.create-tei-files.outputs.runFullCollation
     runs-on: [self-hosted, Linux]
     container:
       image: ghcr.io/dhuniwien/edition-tools
-    continue-on-error: ${{ inputs.blockOnValidation }}
+    continue-on-error: ${{ !inputs.blockOnValidation }}
     steps: 
       - uses: actions/checkout@v3
       - name: Validate committed XML files
