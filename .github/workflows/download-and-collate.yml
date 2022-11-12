@@ -89,7 +89,7 @@ jobs:
 
   validate-tei-xml:
     needs: create-tei-files
-    if: needs.create-tei-files.outputs.runFullCollation
+    if: needs.create-tei-files.outputs.runFullCollation == true
     runs-on: [self-hosted, Linux]
     container:
       image: ghcr.io/dhuniwien/edition-tools
