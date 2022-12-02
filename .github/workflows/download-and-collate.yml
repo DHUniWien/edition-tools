@@ -54,7 +54,7 @@ jobs:
     # We want to know whether any relevant Github files changed as a result of this job.
     # We are also avoiding 'or' statements because something is wrong with the logic.
     outputs:
-      runFullCollation: ${{ steps.commitstep.outputs.committed || inputs.forceCollate }}
+      runFullCollation: ${{ steps.commitstep.outputs.committed == true || inputs.forceCollate == true }}
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
     - name: Checkout the repo
@@ -102,7 +102,7 @@ jobs:
         run: |
           echo runFullCollation set to ${{ needs.create-tei-files.outputs.runFullCollation }}
           if [ ${{ needs.create-tei-files.outputs.runFullCollation }} = false ]; then
-            echo No changes and no force flag; skipping validation
+            echo "No changes and no force flag; skipping validation"
             exit 0
           fi
           verr=0
@@ -132,7 +132,7 @@ jobs:
         run: |
           # Workaround for broken conditional in validation step
           if [ ${{ needs.validate-tei-xml.outputs.runFullCollation }} = false ]; then
-            echo No changes and no force flag; skipping tokenisation
+            echo "No changes and no force flag; skipping tokenisation"
             exit 0
           fi
           rm -rf tokenfiles && mkdir tokenfiles  # Make sure cruft is cleared out
