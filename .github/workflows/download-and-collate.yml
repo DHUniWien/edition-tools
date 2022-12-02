@@ -54,7 +54,7 @@ jobs:
     # We want to know whether any relevant Github files changed as a result of this job.
     # We are also avoiding 'or' statements because something is wrong with the logic.
     outputs:
-      runFullCollation: ${{ !(steps.commitstep.outputs.committed == false && inputs.forceCollate == false) }}
+      runFullCollation: ${{ steps.commitstep.outputs.committed || inputs.forceCollate }}
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
     - name: Checkout the repo
@@ -89,15 +89,22 @@ jobs:
 
   validate-tei-xml:
     needs: create-tei-files
-    if: needs.create-tei-files.outputs.runFullCollation == true
+    # if: needs.create-tei-files.outputs.runFullCollation == true # this still doesn't work
     runs-on: [self-hosted, Linux]
     container:
       image: ghcr.io/dhuniwien/edition-tools
     continue-on-error: ${{ !inputs.blockOnValidation }}
+    outputs:
+      runFullCollation: ${{ needs.create-tei-files.outputs.runFullCollation }}
     steps: 
       - uses: actions/checkout@v3
       - name: Validate committed XML files
         run: |
+          echo runFullCollation set to ${{ needs.create-tei-files.outputs.runFullCollation }}
+          if [ ${{ needs.create-tei-files.outputs.runFullCollation }} = false ]; then
+            echo No changes and no force flag; skipping validation
+            exit 0
+          fi
           verr=0
           # don't stop if a linter fails, instead make sure
           # all files are checked by swallowing the return value
@@ -124,20 +131,19 @@ jobs:
       - name: Tokenize all sections
         run: |
           # Workaround for broken conditional in validation step
-          # if [ ${{ needs.validate-tei-xml.outputs.hackContinue }} = false ]; then
-          #   echo Hack conditional evaluates to ${{ needs.validate-tei-xml.outputs.hackContinue }}
-          #   echo Skipping tokenisation
-          #   exit 0
-          # fi
+          if [ ${{ needs.validate-tei-xml.outputs.runFullCollation }} = false ]; then
+            echo No changes and no force flag; skipping tokenisation
+            exit 0
+          fi
           rm -rf tokenfiles && mkdir tokenfiles  # Make sure cruft is cleared out
           python3 /root/scripts/teixml2collatex.py transcription/tei-xml/ tokenfiles -c transcription/config --verbose
       - name: Collate section by section
         run: |
           # Workaround for broken conditional in validation step
-          # if [ ${{ needs.validate-tei-xml.outputs.hackContinue }} = false ]; then
-          #   echo Skipping collation
-          #   exit 0
-          # fi
+          if [ ${{ needs.validate-tei-xml.outputs.runFullCollation }} = false ]; then
+            echo Skipping collation
+            exit 0
+          fi
           # Construct the base curl command depending on whether we have an API user/password
           CURLCMD='curl --silent'
           if [ -n ${{ secrets.API_HTUSER }} ]; then
