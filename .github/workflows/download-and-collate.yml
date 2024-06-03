@@ -58,7 +58,7 @@ jobs:
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
     - name: Checkout the repo
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
     - name: Fetch files from T-PEN
       run: |
         # Get the config file and add secrets
@@ -97,7 +97,7 @@ jobs:
     outputs:
       runFullCollation: ${{ needs.create-tei-files.outputs.runFullCollation }}
     steps: 
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Validate committed XML files
         run: |
           echo runFullCollation set to ${{ needs.create-tei-files.outputs.runFullCollation }}
@@ -127,7 +127,7 @@ jobs:
       image: ghcr.io/dhuniwien/edition-tools
     needs: validate-tei-xml
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Tokenize all sections
         run: |
           # Workaround for broken conditional in validation step
@@ -235,7 +235,7 @@ jobs:
           (cd collations && tar -czvf results.tgz *.json)
           
       - name: Upload collation result
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with: 
           name: collation-result.tgz
           path: collations/results.tgz
